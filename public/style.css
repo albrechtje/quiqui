@@ -50,14 +50,36 @@ body {
 }
 
 .logo {
-  font-size: 18px;
+  height: 28px;
+  width: auto;
+  display: block;
+}
+
+.logo-title {
+  font-size: 16px;
   font-weight: 500;
+  color: var(--color-text);
   letter-spacing: -0.02em;
 }
 
-.top-bar-role {
-  font-size: 13px;
-  color: var(--color-text-muted);
+.top-bar-role,
+.top-bar-help {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.top-bar-role { flex: 1; }
+
+.top-bar-help:hover { color: var(--color-accent); }
+
+.qr-note {
+  font-size: 11px;
+  color: var(--color-text-hint);
+  margin-top: 4px;
+  text-align: center;
 }
 
 /* ─── Card ─────────────────────────────────────────────────────── */

@@ -11,8 +11,9 @@
 
   <div class="page-wrap">
     <header class="top-bar">
-      <span class="logo" id="logo">QuiQui</span>
-      <span class="top-bar-role">Teacher view</span>
+      <img src="/quiqui-logo.png" alt="QuiQui" class="logo" id="logo" />
+      <span class="top-bar-role">Teacher View</span>
+      <a class="top-bar-help" href="https://github.com/albrechtje/quiqui" target="_blank" rel="noopener">Help</a>
     </header>
 
     <main>
@@ -36,10 +37,13 @@
         <!-- Join info — shown once a session is active -->
         <div id="join-info" style="display:none;">
           <div class="join-row">
-            <img id="qr-img" src="" alt="QR code to join" width="96" height="96" />
+            <div>
+              <img id="qr-img" src="" alt="QR code to join" width="96" height="96" />
+              <div class="qr-note">QR code is stable — safe to use in slides</div>
+            </div>
             <div>
               <div class="section-label">Students join at</div>
-              <div class="join-url" id="join-url"></div>
+              <a class="join-url" id="join-url" href="" target="_blank" rel="noopener"></a>
             </div>
           </div>
         </div>

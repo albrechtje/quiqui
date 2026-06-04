@@ -171,7 +171,7 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
         lastActivity: Date.now(),
       });
       // Notify any students already waiting at this URL
-      io.to(`session:${sessionId}`).emit('session-created');
+      io.to(`session:${sessionId}`).emit('session-created', { title: config.title || null });
     } else {
       // Same repo pulled again — refresh directory and activity
       existing.questionsDir = questionsDir;
@@ -286,7 +286,7 @@ io.on('connection', (socket) => {
         title: s.title || null,
       });
     } else {
-      socket.emit('session-state', { exists: !!s, question: null, votes: null, open: false, total: 0 });
+      socket.emit('session-state', { exists: !!s, question: null, votes: null, open: false, total: 0, title: s ? s.title || null : null });
     }
   });
 

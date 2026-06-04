@@ -86,14 +86,13 @@ async function pullRepo() {
     sessionExpired = false;
     const joinUrl = `${location.origin}/join/${currentSessionId}`;
     joinUrlEl.textContent = joinUrl;
+    joinUrlEl.href = joinUrl;
     joinInfo.style.display = '';
     fetchQR(joinUrl);
 
     if (data.config && data.config.title) {
       currentTitle = data.config.title;
-      const t = `QuiQui: ${currentTitle}`;
-      document.title = t;
-      document.getElementById('logo').textContent = t;
+      document.title = `QuiQui: ${currentTitle}`;
     }
 
 

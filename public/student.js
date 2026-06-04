@@ -80,7 +80,8 @@ socket.on('session-expired', () => {
 });
 
 // Teacher pulled a new repo — update message for students already on the waiting screen
-socket.on('session-created', () => {
+socket.on('session-created', ({ title }) => {
+  if (title) applyTitle(title);
   if (!currentQuestion) {
     document.getElementById('waiting-msg').innerHTML = 'Waiting for the lecturer<span class="dot-anim"></span>';
   }
@@ -186,9 +187,8 @@ function showScreen(name) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function applyTitle(title) {
-  const t = `QuiQui: ${title}`;
-  document.title = t;
-  document.getElementById('logo').textContent = t;
+  document.title = `QuiQui: ${title}`;
+  document.getElementById('logo-title').textContent = title;
 }
 
 function escHtml(s) {
