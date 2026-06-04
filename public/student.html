@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QuiQui</title>
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/katex.min.css" />
 </head>
 <body>
 
@@ -18,7 +19,7 @@
       <!-- Waiting screen -->
       <section class="card screen" id="screen-waiting">
         <div class="join-screen-inner">
-          <div class="waiting-msg">Waiting for the lecturer<span class="dot-anim"></span></div>
+          <div class="waiting-msg" id="waiting-msg">Waiting for the lecturer<span class="dot-anim"></span></div>
         </div>
       </section>
 
@@ -46,6 +47,8 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/marked.min.js"></script>
+  <script src="/katex.min.js"></script>
+  <script src="/katex-extension.js"></script>
   <script src="/student.js"></script>
 </body>
 </html>

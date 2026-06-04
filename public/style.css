@@ -84,6 +84,11 @@ body {
   margin-top: 8px;
 }
 
+.meta-line--error {
+  color: #c0392b;
+  font-weight: 500;
+}
+
 /* ─── Form elements ────────────────────────────────────────────── */
 input[type="text"],
 select {

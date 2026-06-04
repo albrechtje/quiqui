@@ -1,3 +1,5 @@
+marked.use(markedKatex({ throwOnError: false }));
+
 const socket = io();
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -6,6 +8,7 @@ let selectedQuestion = null;
 let selectedIndex = -1;
 let currentSessionId = null;
 let currentTitle = null;
+let sessionExpired = false;
 let joined = 0;
 
 // Slug is the path segment this page was loaded from — used as the teacher token
@@ -47,13 +50,18 @@ const statusBadge     = document.getElementById('status-badge');
   if (repo) pullRepo();
 })();
 
+function setStatus(msg, isError = false) {
+  pullStatus.textContent = msg;
+  pullStatus.classList.toggle('meta-line--error', isError);
+}
+
 // ─── Repo pull ────────────────────────────────────────────────────────────────
 async function pullRepo() {
   const repo = repoInput.value.trim();
-  if (!repo) { pullStatus.textContent = 'Enter a repo URL first.'; return; }
+  if (!repo) { setStatus('Enter a repo URL first.', true); return; }
 
   btnPull.disabled = true;
-  pullStatus.textContent = 'Cloning…';
+  setStatus('Cloning…');
 
   try {
     const res = await fetch('/api/pull', {
@@ -73,13 +81,13 @@ async function pullRepo() {
       fileSelect.appendChild(opt);
     });
 
-    if (data.config && data.config.session_url) {
-      currentSessionId = data.config.session_url;
-      const joinUrl = `${location.origin}/join/${currentSessionId}`;
-      joinUrlEl.textContent = joinUrl;
-      joinInfo.style.display = '';
-      fetchQR(joinUrl);
-    }
+    // sessionId is always returned by the server (from config.session_url or random fallback)
+    currentSessionId = data.sessionId;
+    sessionExpired = false;
+    const joinUrl = `${location.origin}/join/${currentSessionId}`;
+    joinUrlEl.textContent = joinUrl;
+    joinInfo.style.display = '';
+    fetchQR(joinUrl);
 
     if (data.config && data.config.title) {
       currentTitle = data.config.title;
@@ -93,11 +101,11 @@ async function pullRepo() {
     url.searchParams.set('repo', repo);
     history.replaceState(null, '', url);
 
-    pullStatus.textContent = `Pulled ${data.files.length} file(s).`;
+    setStatus(`Pulled ${data.files.length} file(s).`);
     sectionQuestions.style.display = 'none';
     questionList.innerHTML = '';
   } catch (err) {
-    pullStatus.textContent = 'Error: ' + err.message;
+    setStatus('Error: ' + err.message, true);
   } finally {
     btnPull.disabled = false;
   }
@@ -109,7 +117,7 @@ async function loadFile() {
   if (!file) { sectionQuestions.style.display = 'none'; return; }
 
   try {
-    const res = await fetch(`/api/questions?file=${encodeURIComponent(file)}`, {
+    const res = await fetch(`/api/questions?file=${encodeURIComponent(file)}&sessionId=${encodeURIComponent(currentSessionId)}`, {
       headers: { 'X-Teacher-Token': TEACHER_TOKEN },
     });
     const data = await res.json();
@@ -121,7 +129,7 @@ async function loadFile() {
     sectionActive.style.display = 'none';
     selectedQuestion = null;
   } catch (err) {
-    pullStatus.textContent = 'Error loading file: ' + err.message;
+    setStatus('Error loading file: ' + err.message, true);
   }
 }
 
@@ -179,12 +187,7 @@ function setStatusBadge(state) {
 
 // ─── Activate question ────────────────────────────────────────────────────────
 function activateQuestion() {
-  if (!selectedQuestion) return;
-
-  // Derive session ID from config or generate a short random one
-  if (!currentSessionId) {
-    currentSessionId = Math.random().toString(36).slice(2, 8);
-  }
+  if (!selectedQuestion || sessionExpired) return;
 
   socket.emit('activate-question', {
     question: selectedQuestion,
@@ -255,11 +258,12 @@ socket.on('voting-closed', () => {
 
 socket.on('session-expired', () => {
   sessionExpired = true;
+  currentSessionId = null;
   setStatusBadge('closed');
   btnClose.style.display = 'none';
   btnActivate.style.display = 'none';
   btnNext.style.display = 'none';
-  pullStatus.textContent = 'Session has expired. Pull the repo again to start a new session.';
+  setStatus('Session has expired. Pull the repo again to start a new session.', true);
 });
 
 // ─── Bar chart ────────────────────────────────────────────────────────────────

@@ -1,3 +1,5 @@
+marked.use(markedKatex({ throwOnError: false }));
+
 const socket = io();
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -33,10 +35,14 @@ function getSessionId() {
 // ─── Socket events ────────────────────────────────────────────────────────────
 
 // Initial state when joining
-socket.on('session-state', ({ question, open, title }) => {
+socket.on('session-state', ({ exists, question, open, title }) => {
   if (title) applyTitle(title);
   if (question && open) {
     showQuestion(question);
+  } else {
+    document.getElementById('waiting-msg').innerHTML = exists
+      ? 'Waiting for the lecturer<span class="dot-anim"></span>'
+      : 'No quiz session active at this URL.';
   }
 });
 
@@ -62,6 +68,22 @@ socket.on('voting-closed', () => {
   submitted = false;
   selected = [];
   showScreen('waiting');
+});
+
+// Session expired — show "no session" message without requiring a refresh
+socket.on('session-expired', () => {
+  currentQuestion = null;
+  submitted = false;
+  selected = [];
+  document.getElementById('waiting-msg').innerHTML = 'No quiz session active at this URL.';
+  showScreen('waiting');
+});
+
+// Teacher pulled a new repo — update message for students already on the waiting screen
+socket.on('session-created', () => {
+  if (!currentQuestion) {
+    document.getElementById('waiting-msg').innerHTML = 'Waiting for the lecturer<span class="dot-anim"></span>';
+  }
 });
 
 // ─── Show question ────────────────────────────────────────────────────────────

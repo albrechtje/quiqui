@@ -2,7 +2,7 @@
 
 A lightweight live audience response tool for university lectures. The lecturer poses an activating question, students answer on their own devices, and the class sees a live bar chart of the distribution — no correct answer revealed, just a moment for discussion.
 
-> Inspired by Slido and Mentimeter, but deliberately minimal: one or two questions per lecture, no accounts, no app installs, no scoring.
+> Inspired by Slido and Mentimeter, but deliberately minimal: no accounts, no app installs, no scoring.
 
 ---
 
@@ -12,7 +12,9 @@ A lightweight live audience response tool for university lectures. The lecturer 
 - **No student login** — students join by scanning a QR code or visiting a URL
 - **Live results** — bar chart updates in real time as students submit
 - **Single and multiple choice** — per-question type configured in YAML
+- **Markdown and LaTeX** — question text and answers support code blocks, inline code, and math expressions
 - **Questions in Git** — question files live in a public GitHub repo; no admin interface needed
+- **Multiple concurrent sessions** — each repo's `session_url` defines an independent session
 - **No database** — all session state is in memory and intentionally ephemeral
 - **No build step** — vanilla HTML/CSS/JS frontend, deploy anywhere Node.js runs
 
@@ -37,6 +39,12 @@ A lightweight live audience response tool for university lectures. The lecturer 
 4. See the live distribution of answers across the class
 5. When the lecturer closes voting, you return to the waiting screen for the next question
 
+### Session lifecycle
+
+- A session is created when a teacher pulls a repo. It is identified by `session_url` from `config.yaml` (or a random ID if absent).
+- The session expires after **90 minutes of inactivity** (no pull, activate, or close action). On expiry, all server-side state and cloned files are deleted automatically.
+- Students at the join URL see "Waiting for the lecturer" while a session is active, and "No quiz session active at this URL" after it expires — without needing to refresh.
+
 ---
 
 ## Getting started
@@ -44,7 +52,7 @@ A lightweight live audience response tool for university lectures. The lecturer 
 ### Prerequisites
 
 - Node.js 18 or later
-- A public GitHub repository containing your question YAML files (see [question format](#question-format))
+- A public GitHub repository containing your question YAML files (see [albrechtje/quiqui-questions](https://github.com/albrechtje/quiqui-questions))
 
 ### Installation
 
@@ -85,76 +93,15 @@ Both commands set the required git environment variables automatically (see `sta
 
 Then open:
 - Teacher page: `http://localhost:3000/teach` (or your configured slug)
-- Student page: `http://localhost:3000/join/<sessionId>` (shown as QR after activating a question)
+- Student page: `http://localhost:3000/join/<session_url>` (shown as QR code after pulling a repo)
 
 ---
 
 ## Question format
 
-Questions live in a public GitHub repository, one `.yaml` file per lecture. See [albrechtje/quiqui-questions](https://github.com/albrechtje/quiqui-questions) for a working example.
+Questions live in a **public GitHub repository**, one `.yaml` file per lecture. See [albrechtje/quiqui-questions](https://github.com/albrechtje/quiqui-questions) for the full format reference and working examples.
 
-### Single choice
-
-```yaml
-- question: "What is the result of `7 // 2` in Python?"
-  type: single
-  answers:
-    - "`3.5`"
-    - "`3`"
-    - "`4`"
-    - "`2`"
-  correct: "B — // is floor division. 7 / 2 = 3.5, floored to 3."
-```
-
-### Multiple choice
-
-```yaml
-- question: "Which of these are valid Python data types?"
-  type: multiple
-  answers:
-    - "`int`"
-    - "`float`"
-    - "`char`"
-    - "`str`"
-    - "`bool`"
-  correct: "A, B, D, E — Python has no char type."
-```
-
-### Question with a code block
-
-Use a YAML block scalar (`|`) to write multi-line Markdown with fenced code blocks:
-
-```yaml
-- question: |
-    What does the following code print?
-
-    ```python
-    for i in range(3):
-        print(i)
-    ```
-  type: single
-  answers:
-    - "`1 2 3`"
-    - "`0 1 2`"
-    - "`0 1 2 3`"
-  correct: "B — range(3) produces 0, 1, 2."
-```
-
-- `type: single` — student may select exactly one answer
-- `type: multiple` — student may select one or more answers
-- `correct` — optional free-text field shown only on the teacher screen, never to students
-
-### config.yaml
-
-An optional `config.yaml` at the root of your question repo:
-
-```yaml
-session_url: python101
-title: Python 101
-```
-
-- `session_url` — sets a stable join URL for the session (e.g. `/join/python101`). Students can bookmark or stay on this URL across multiple questions in a lecture. If omitted, QuiQui generates a random short ID each time a question is activated.
-- `title` — optional display name shown in the header and browser tab of both teacher and student views, formatted as `QuiQui: <title>`.
+> **Limits:** QuiQui checks the repository size via the GitHub API before cloning and rejects repos larger than **1 MB**. Individual question files larger than **100 KB** are also rejected when loaded. In practice a full lecture file is well under 50 KB.
 
 ---
 
@@ -186,24 +133,27 @@ Everything in `public/` is served statically and is publicly accessible by filen
 | Event | Direction | Payload | Description |
 |---|---|---|---|
 | `join-session` | client → server | `{ sessionId }` | Student joins a session room |
-| `session-state` | server → client | `{ question, votes, open, total }` | Current state sent on join |
+| `session-state` | server → client | `{ exists, question, votes, open, total, title }` | Current state sent on join |
+| `session-created` | server → clients | — | Emitted when a teacher pulls a repo; updates waiting students |
 | `activate-question` | client → server | `{ question, sessionId, token, title }` | Teacher activates a question |
 | `question-activated` | server → clients | `{ question, sessionId, title }` | Broadcast to all students in session |
 | `submit-answer` | client → server | `{ sessionId, selected: [0, 2] }` | Student submits answer indices |
 | `vote-update` | server → clients | `{ votes, total }` | Broadcast after each new vote |
 | `close-voting` | client → server | `{ sessionId, token }` | Teacher closes voting |
 | `voting-closed` | server → clients | — | Students return to waiting screen |
+| `session-expired` | server → clients | — | Session timed out; teacher UI locked, students see "no session" message |
 
 ---
 
 ## Security model
 
-QuiQui uses a shared-secret approach suited for single-user deployments:
+QuiQui uses a shared-secret approach suited for lecture deployments:
 
 - **Teacher page** is only reachable at `/:teacherSlug` — the HTML file is not accessible as a static asset
 - **Teacher API endpoints** (`/api/pull`, `/api/questions`, `/api/qr`, `/api/session`) require an `X-Teacher-Token` header matching the slug
 - **Teacher socket events** (`activate-question`, `close-voting`) require a `token` field matching the slug
 - **Student endpoints** (`/join/:sessionId`, socket events) are intentionally open — no login required
+- **Only public GitHub repos** are accepted — `file://` and `ssh://` URLs are rejected; repo size is checked via the GitHub API before cloning
 
 This is not a substitute for HTTPS or a proper authentication system. For a shared deployment used by multiple lecturers, add authentication in a future version.
 
@@ -211,15 +161,17 @@ This is not a substitute for HTTPS or a proper authentication system. For a shar
 
 ## Deployment
 
-QuiQui runs on any platform that supports Node.js. [Render](https://render.com) and [Railway](https://railway.app) both have free tiers that work well for lecture use.
+QuiQui runs on any platform that supports Node.js. [Render](https://render.com) is recommended — it has a free tier and supports persistent processes (required for Socket.io).
 
 1. Push this repo to GitHub
-2. Create a new Web Service pointing at your repo
+2. Go to [render.com](https://render.com) → **New → Web Service** → connect your repo
 3. Set the build command to `npm install` and the start command to `npm start`
-4. Add your environment variables (`TEACHER_SLUG`, `PORT`) in the platform dashboard
-5. Bookmark your teacher URL: `https://your-app.onrender.com/<TEACHER_SLUG>?repo=https://github.com/you/quiqui-questions`
+4. Add environment variable `TEACHER_SLUG` in the dashboard (choose something hard to guess)
+5. Deploy, then bookmark your teacher URL: `https://your-app.onrender.com/<TEACHER_SLUG>?repo=https://github.com/you/quiqui-questions`
 
-The `tmp/questions/` directory is recreated on each pull — no persistent storage needed.
+> **Note:** Render's free tier spins down after 15 minutes of inactivity and takes ~30 seconds to wake on the next request. Open your teacher page a minute before class to avoid a cold start.
+
+Cloned question files live in `tmp/sessions/` and are deleted automatically when a session expires — no persistent storage needed.
 
 ---
 
