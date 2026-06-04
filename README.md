@@ -96,13 +96,13 @@ Questions live in a public GitHub repository, one `.yaml` file per lecture. See 
 ### Single choice
 
 ```yaml
-- question: "What is the result of 7 // 2 in Python?"
+- question: "What is the result of `7 // 2` in Python?"
   type: single
   answers:
-    - "3.5"
-    - "3"
-    - "4"
-    - "2"
+    - "`3.5`"
+    - "`3`"
+    - "`4`"
+    - "`2`"
   correct: "B — // is floor division. 7 / 2 = 3.5, floored to 3."
 ```
 
@@ -112,12 +112,32 @@ Questions live in a public GitHub repository, one `.yaml` file per lecture. See 
 - question: "Which of these are valid Python data types?"
   type: multiple
   answers:
-    - "int"
-    - "float"
-    - "char"
-    - "str"
-    - "bool"
+    - "`int`"
+    - "`float`"
+    - "`char`"
+    - "`str`"
+    - "`bool`"
   correct: "A, B, D, E — Python has no char type."
+```
+
+### Question with a code block
+
+Use a YAML block scalar (`|`) to write multi-line Markdown with fenced code blocks:
+
+```yaml
+- question: |
+    What does the following code print?
+
+    ```python
+    for i in range(3):
+        print(i)
+    ```
+  type: single
+  answers:
+    - "`1 2 3`"
+    - "`0 1 2`"
+    - "`0 1 2 3`"
+  correct: "B — range(3) produces 0, 1, 2."
 ```
 
 - `type: single` — student may select exactly one answer

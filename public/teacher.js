@@ -75,6 +75,10 @@ async function pullRepo() {
 
     if (data.config && data.config.session_url) {
       currentSessionId = data.config.session_url;
+      const joinUrl = `${location.origin}/join/${currentSessionId}`;
+      joinUrlEl.textContent = joinUrl;
+      joinInfo.style.display = '';
+      fetchQR(joinUrl);
     }
 
     if (data.config && data.config.title) {
@@ -83,6 +87,7 @@ async function pullRepo() {
       document.title = t;
       document.getElementById('logo').textContent = t;
     }
+
 
     const url = new URL(window.location);
     url.searchParams.set('repo', repo);
@@ -128,7 +133,7 @@ function renderQuestionList() {
     item.className = 'q-item';
     item.dataset.index = i;
     item.innerHTML = `
-      <span class="q-text">${escHtml(q.question)}</span>
+      <span class="q-text">${mdInline(q.question)}</span>
       <span class="q-badge">${q.type === 'multiple' ? 'multi' : 'single'}</span>
     `;
     item.addEventListener('click', () => selectQuestion(i));
@@ -144,11 +149,10 @@ function selectQuestion(index) {
     el.classList.toggle('active-q', i === index);
   });
 
-  activeQText.textContent = selectedQuestion.question;
+  activeQText.innerHTML = mdHtml(selectedQuestion.question);
   sectionActive.style.display = '';
 
   // Show preview state — answer options with empty bars, ready to activate
-  joinInfo.style.display = 'none';
   liveStats.style.display = 'none';
   btnActivate.style.display = '';
   btnClose.style.display = 'none';
@@ -199,11 +203,6 @@ function activateQuestion() {
   statJoined.textContent = '0';
   joined = 0;
 
-  // Show join info
-  const joinUrl = `${location.origin}/join/${currentSessionId}`;
-  joinUrlEl.textContent = joinUrl;
-  joinInfo.style.display = '';
-  fetchQR(joinUrl);
 
   // Init bar chart
   renderBarChart(selectedQuestion.answers, {}, 0);
@@ -254,6 +253,15 @@ socket.on('voting-closed', () => {
   btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
 });
 
+socket.on('session-expired', () => {
+  sessionExpired = true;
+  setStatusBadge('closed');
+  btnClose.style.display = 'none';
+  btnActivate.style.display = 'none';
+  btnNext.style.display = 'none';
+  pullStatus.textContent = 'Session has expired. Pull the repo again to start a new session.';
+});
+
 // ─── Bar chart ────────────────────────────────────────────────────────────────
 function renderBarChart(answers, votes, total) {
   barChart.innerHTML = '';
@@ -264,7 +272,7 @@ function renderBarChart(answers, votes, total) {
     const row = document.createElement('div');
     row.className = 'bar-row';
     row.innerHTML = `
-      <div class="bar-label" title="${escHtml(ans)}">${escHtml(ans)}</div>
+      <div class="bar-label" title="${escHtml(ans)}">${mdInline(ans)}</div>
       <div class="bar-track">
         <div class="bar-fill" style="width:${pct}%">
           ${pct >= 15 ? `<span class="bar-pct-inside">${pct}%</span>` : ''}
@@ -279,4 +287,13 @@ function renderBarChart(answers, votes, total) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function escHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Render Markdown to HTML; inline-only (no wrapping <p>) for single-line strings
+function mdHtml(s) {
+  return marked.parse(s);
+}
+
+function mdInline(s) {
+  return marked.parseInline(s);
 }

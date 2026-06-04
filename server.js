@@ -17,10 +17,13 @@ const PORT = process.env.PORT || 3000;
 const TEACHER_SLUG = process.env.TEACHER_SLUG || 'teach';
 const QUESTIONS_DIR = path.join(__dirname, 'tmp', 'questions');
 
+const SESSION_TIMEOUT_MS = 90 * 60 * 1000; // 90 minutes after last question activation
+
 // ─── In-memory session state ──────────────────────────────────────────────────
 // One active session at a time (v1 scope).
 let session = null;
-// { sessionId, activeQuestion, votes: {0:n,...}, voters: Set, open: bool }
+// { sessionId, activeQuestion, title, votes, voters, open }
+let sessionTimer = null; // reset on each activation, expires the session after 90 min of inactivity
 
 // ─── Static files ─────────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
@@ -37,6 +40,11 @@ function requireTeacher(req, res, next) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
+// Serve marked UMD bundle for the browser
+app.get('/marked.min.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'node_modules', 'marked', 'lib', 'marked.umd.js'));
+});
+
 // Teacher page
 app.get(`/${TEACHER_SLUG}`, (req, res) => {
   res.sendFile(path.join(__dirname, 'teacher.html'));
@@ -52,26 +60,28 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
   const { repo } = req.body;
   if (!repo) return res.status(400).json({ error: 'repo is required' });
 
+  // Only allow public HTTPS repos — blocks file:// and ssh:// clones
+  if (!/^https:\/\//i.test(repo)) {
+    return res.status(400).json({ error: 'Only https:// repository URLs are supported.' });
+  }
+
   try {
     await fs.promises.rm(QUESTIONS_DIR, { recursive: true, force: true });
     await fs.promises.mkdir(QUESTIONS_DIR, { recursive: true });
 
     const git = simpleGit();
 
-    const cloneWithTimeout = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Clone timed out after 15 seconds')), 15000);
-      git.clone(repo, QUESTIONS_DIR, ['--depth', '1'])
-        .then(() => { clearTimeout(timeout); resolve(); })
-        .catch(err => { clearTimeout(timeout); reject(err); });
-    });
-    await cloneWithTimeout;
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Clone timed out after 15 seconds')), 15000)
+    );
+    await Promise.race([git.clone(repo, QUESTIONS_DIR, ['--depth', '1']), timeout]);
 
     // Read optional config.yaml
     let config = {};
     const configPath = path.join(QUESTIONS_DIR, 'config.yaml');
-    if (fs.existsSync(configPath)) {
-      config = yaml.load(fs.readFileSync(configPath, 'utf8')) || {};
-    }
+    try {
+      config = yaml.load(await fs.promises.readFile(configPath, 'utf8')) || {};
+    } catch (_) { /* config.yaml is optional */ }
 
     // List .yaml / .yml files (excluding config.yaml)
     const all = await fs.promises.readdir(QUESTIONS_DIR);
@@ -134,6 +144,18 @@ app.get('/api/session', requireTeacher, (req, res) => {
   });
 });
 
+// ─── Session expiry ───────────────────────────────────────────────────────────
+
+function expireSession() {
+  if (!session) return;
+  const { sessionId } = session;
+  session.open = false;
+  sessionTimer = null;
+  io.to(`session:${sessionId}`).emit('voting-closed');
+  io.to(`session:${sessionId}`).emit('session-expired');
+  console.log(`Session ${sessionId} expired.`);
+}
+
 // ─── Socket.io ────────────────────────────────────────────────────────────────
 
 io.on('connection', (socket) => {
@@ -157,9 +179,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Teacher activates a question
+  // Teacher activates a question — token checked here because socket events have no HTTP headers
   socket.on('activate-question', ({ question, sessionId, token, title }) => {
     if (token !== TEACHER_SLUG) return;
+
     socket.join(`session:${sessionId}`);
     session = {
       sessionId,
@@ -169,6 +192,11 @@ io.on('connection', (socket) => {
       voters: new Set(),
       open: true,
     };
+
+    // Reset the 90-minute inactivity timer on every activation
+    clearTimeout(sessionTimer);
+    sessionTimer = setTimeout(expireSession, SESSION_TIMEOUT_MS);
+
     // Initialise vote counts
     question.answers.forEach((_, i) => { session.votes[i] = 0; });
 
@@ -181,7 +209,10 @@ io.on('connection', (socket) => {
   socket.on('submit-answer', ({ sessionId, selected }) => {
     if (!session || session.sessionId !== sessionId) return;
     if (!session.open) return;
-    if (session.voters.has(socket.id)) return; // no double voting
+    if (session.voters.has(socket.id)) return; // deduplicated by socket ID
+
+    // Cap selections to the number of actual answers to prevent inflated counts
+    if (!Array.isArray(selected) || selected.length > session.activeQuestion.answers.length) return;
 
     session.voters.add(socket.id);
     selected.forEach(idx => {
@@ -192,7 +223,7 @@ io.on('connection', (socket) => {
     io.to(`session:${sessionId}`).emit('vote-update', { votes: session.votes, total });
   });
 
-  // Teacher closes voting
+  // Teacher closes voting — token checked same as activate-question
   socket.on('close-voting', ({ sessionId, token }) => {
     if (token !== TEACHER_SLUG) return;
     if (!session || session.sessionId !== sessionId) return;

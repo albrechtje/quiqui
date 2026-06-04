@@ -70,7 +70,7 @@ function showQuestion(question) {
   selected = [];
 
   typeHint.textContent = question.type === 'multiple' ? 'Select all that apply' : 'Select one answer';
-  questionText.textContent = question.question;
+  questionText.innerHTML = mdHtml(question.question);
 
   answerList.innerHTML = '';
   const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
@@ -80,7 +80,7 @@ function showQuestion(question) {
     opt.dataset.index = i;
     opt.innerHTML = `
       <div class="opt-key">${keys[i] || i + 1}</div>
-      <div>${escHtml(ans)}</div>
+      <div>${mdInline(ans)}</div>
     `;
     opt.addEventListener('click', () => toggleAnswer(i, opt, question.type));
     answerList.appendChild(opt);
@@ -143,7 +143,7 @@ function renderBarChart(answers, votes, total) {
     // Highlight the student's own selection(s)
     const isOwn = selected.includes(i);
     row.innerHTML = `
-      <div class="bar-label" title="${escHtml(ans)}" style="${isOwn ? 'color:var(--color-accent-text);font-weight:500' : ''}">${escHtml(ans)}</div>
+      <div class="bar-label" title="${escHtml(ans)}" style="${isOwn ? 'color:var(--color-accent-text);font-weight:500' : ''}">${mdInline(ans)}</div>
       <div class="bar-track">
         <div class="bar-fill" style="width:${pct}%;${isOwn ? 'background:var(--color-accent-dark)' : ''}">
           ${pct >= 15 ? `<span class="bar-pct-inside">${pct}%</span>` : ''}
@@ -171,4 +171,12 @@ function applyTitle(title) {
 
 function escHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function mdHtml(s) {
+  return marked.parse(s);
+}
+
+function mdInline(s) {
+  return marked.parseInline(s);
 }
