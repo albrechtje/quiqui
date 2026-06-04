@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuiQui — Teacher</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="page-wrap">
+    <header class="top-bar">
+      <span class="logo">QuiQui</span>
+      <span class="top-bar-role">Teacher view</span>
+    </header>
+
+    <main>
+
+      <!-- Repo + file selection -->
+      <section class="card" id="section-repo">
+        <div class="section-label">Lecture file</div>
+        <div class="file-row">
+          <input type="text" id="repo-url" placeholder="https://github.com/you/quiqui-questions" />
+          <button class="btn-secondary" id="btn-pull">
+            <span class="icon">↻</span> Pull latest
+          </button>
+        </div>
+        <div class="file-row" style="margin-top: 10px;">
+          <select id="file-select">
+            <option value="">— select a lecture file —</option>
+          </select>
+        </div>
+        <div class="meta-line" id="pull-status"></div>
+      </section>
+
+      <!-- Question list -->
+      <section id="section-questions" style="display:none;">
+        <div class="section-label">Questions</div>
+        <div class="question-list" id="question-list">
+          <!-- populated by JS -->
+        </div>
+      </section>
+
+      <!-- Active question panel -->
+      <section class="card" id="section-active" style="display:none;">
+        <div class="active-header">
+          <div class="active-question-text" id="active-q-text"></div>
+          <span class="badge-live" id="badge-live" style="display:none;">● Live</span>
+        </div>
+
+        <!-- Join info (shown when active) -->
+        <div id="join-info" style="display:none;">
+          <div class="join-row">
+            <img id="qr-img" src="" alt="QR code to join" width="96" height="96" />
+            <div>
+              <div class="section-label">Students join at</div>
+              <div class="join-url" id="join-url"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live stats -->
+        <div class="live-stats" id="live-stats" style="display:none;">
+          <div class="stat-card">
+            <div class="stat-num" id="stat-answered">0</div>
+            <div class="stat-label">answered</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-joined">0</div>
+            <div class="stat-label">joined</div>
+          </div>
+        </div>
+
+        <!-- Bar chart -->
+        <div class="bar-wrap" id="bar-chart">
+          <!-- populated by JS -->
+        </div>
+
+        <!-- Correct answer (teacher only) -->
+        <div class="meta-line" id="correct-answer" style="display:none;"></div>
+
+        <!-- Controls -->
+        <div class="btn-row">
+          <button class="btn-primary" id="btn-activate" onclick="activateQuestion()">Activate question</button>
+          <button class="btn-secondary" id="btn-close" style="display:none;" onclick="closeVoting()">Close voting</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="teacher.js"></script>
+</body>
+</html>

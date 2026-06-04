@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuiQui</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="page-wrap page-wrap--narrow">
+    <header class="top-bar">
+      <span class="logo">QuiQui</span>
+    </header>
+
+    <main>
+
+      <!-- Waiting screen -->
+      <section class="card screen" id="screen-waiting">
+        <div class="join-screen-inner">
+          <div class="waiting-msg">Waiting for the lecturer<span class="dot-anim"></span></div>
+        </div>
+      </section>
+
+      <!-- Question screen -->
+      <section class="card screen" id="screen-question" style="display:none;">
+        <div class="type-hint" id="type-hint"></div>
+        <div class="q-heading" id="student-q-text"></div>
+        <div class="answer-list" id="student-answer-list">
+          <!-- populated by JS -->
+        </div>
+        <button class="btn-primary btn-full" id="btn-submit" disabled onclick="submitAnswer()">Submit</button>
+      </section>
+
+      <!-- Result screen -->
+      <section class="card screen" id="screen-result" style="display:none;">
+        <div class="result-heading">Results</div>
+        <div class="bar-wrap" id="student-bar-chart">
+          <!-- populated by JS -->
+        </div>
+        <div class="meta-line" id="student-result-meta"></div>
+        <div class="voting-closed-msg" id="voting-closed-msg" style="display:none;">Voting closed</div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="student.js"></script>
+</body>
+</html>

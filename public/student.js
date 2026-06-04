@@ -1,0 +1,171 @@
+const socket = io();
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let currentQuestion = null;
+let selected = [];       // indices of selected answer(s)
+let submitted = false;
+
+// ─── DOM refs ─────────────────────────────────────────────────────────────────
+const screenWaiting   = document.getElementById('screen-waiting');
+const screenQuestion  = document.getElementById('screen-question');
+const screenResult    = document.getElementById('screen-result');
+const typeHint        = document.getElementById('type-hint');
+const questionText    = document.getElementById('student-q-text');
+const answerList      = document.getElementById('student-answer-list');
+const btnSubmit       = document.getElementById('btn-submit');
+const studentBarChart = document.getElementById('student-bar-chart');
+const resultMeta      = document.getElementById('student-result-meta');
+const votingClosedMsg = document.getElementById('voting-closed-msg');
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  const sessionId = getSessionId();
+  if (!sessionId) return;
+
+  socket.emit('join-session', { sessionId });
+
+  btnSubmit.addEventListener('click', submitAnswer);
+})();
+
+function getSessionId() {
+  const parts = window.location.pathname.split('/');
+  return parts[parts.length - 1] || null;
+}
+
+// ─── Socket events ────────────────────────────────────────────────────────────
+
+// Initial state when joining
+socket.on('session-state', ({ question, votes, open, total }) => {
+  if (question && open) {
+    showQuestion(question);
+  } else if (question && !open) {
+    // Voting already closed — show results immediately
+    showQuestion(question);
+    showResults(votes, total, question);
+    votingClosedMsg.style.display = '';
+  }
+  // else: no active question, stay on waiting screen
+});
+
+// Teacher pushes a new question
+socket.on('question-activated', ({ question }) => {
+  submitted = false;
+  selected = [];
+  showQuestion(question);
+});
+
+// New vote came in
+socket.on('vote-update', ({ votes, total }) => {
+  if (!currentQuestion) return;
+  if (submitted) {
+    showResults(votes, total, currentQuestion);
+  }
+});
+
+// Voting closed by teacher
+socket.on('voting-closed', () => {
+  votingClosedMsg.style.display = '';
+  btnSubmit.disabled = true;
+});
+
+// ─── Show question ────────────────────────────────────────────────────────────
+function showQuestion(question) {
+  currentQuestion = question;
+  selected = [];
+
+  typeHint.textContent = question.type === 'multiple' ? 'Select all that apply' : 'Select one answer';
+  questionText.textContent = question.question;
+
+  answerList.innerHTML = '';
+  const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
+  question.answers.forEach((ans, i) => {
+    const opt = document.createElement('div');
+    opt.className = 'answer-opt';
+    opt.dataset.index = i;
+    opt.innerHTML = `
+      <div class="opt-key">${keys[i] || i + 1}</div>
+      <div>${escHtml(ans)}</div>
+    `;
+    opt.addEventListener('click', () => toggleAnswer(i, opt, question.type));
+    answerList.appendChild(opt);
+  });
+
+  btnSubmit.disabled = true;
+  submitted = false;
+
+  showScreen('question');
+}
+
+function toggleAnswer(index, el, type) {
+  if (submitted) return;
+
+  if (type === 'single') {
+    // Deselect all others
+    document.querySelectorAll('.answer-opt').forEach(o => o.classList.remove('selected'));
+    selected = [index];
+  } else {
+    // Toggle this one
+    if (selected.includes(index)) {
+      selected = selected.filter(i => i !== index);
+      el.classList.remove('selected');
+    } else {
+      selected.push(index);
+    }
+  }
+
+  el.classList.toggle('selected', selected.includes(index));
+  btnSubmit.disabled = selected.length === 0;
+}
+
+// ─── Submit answer ────────────────────────────────────────────────────────────
+function submitAnswer() {
+  if (submitted || selected.length === 0 || !currentQuestion) return;
+  submitted = true;
+  btnSubmit.disabled = true;
+
+  const sessionId = getSessionId();
+  socket.emit('submit-answer', { sessionId, selected });
+}
+window.submitAnswer = submitAnswer;
+
+// ─── Show results ─────────────────────────────────────────────────────────────
+function showResults(votes, total, question) {
+  showScreen('result');
+  resultMeta.textContent = `${total} answer${total !== 1 ? 's' : ''} submitted`;
+  renderBarChart(question.answers, votes, total);
+}
+
+function renderBarChart(answers, votes, total) {
+  studentBarChart.innerHTML = '';
+  answers.forEach((ans, i) => {
+    const count = (votes && votes[i]) || 0;
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+
+    // Highlight the student's own selection(s)
+    const isOwn = selected.includes(i);
+    row.innerHTML = `
+      <div class="bar-label" title="${escHtml(ans)}" style="${isOwn ? 'color:var(--color-accent-text);font-weight:500' : ''}">${escHtml(ans)}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;${isOwn ? 'background:var(--color-accent-dark)' : ''}">
+          ${pct >= 15 ? `<span class="bar-pct-inside">${pct}%</span>` : ''}
+        </div>
+      </div>
+      <div class="bar-pct-outside">${pct < 15 ? pct + '%' : ''}&nbsp;(${count})</div>
+    `;
+    studentBarChart.appendChild(row);
+  });
+}
+
+// ─── Screen switching ─────────────────────────────────────────────────────────
+function showScreen(name) {
+  screenWaiting.style.display  = name === 'waiting'  ? '' : 'none';
+  screenQuestion.style.display = name === 'question' ? '' : 'none';
+  screenResult.style.display   = name === 'result'   ? '' : 'none';
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
