@@ -4,6 +4,8 @@ A lightweight live audience response tool for university lectures. The lecturer 
 
 > Inspired by Slido and Mentimeter, but deliberately minimal: no accounts, no app installs, no scoring.
 
+**→ [Quickstart guide for lecturers](QUICKSTART.md)** — get up and running in 5 minutes.
+
 ---
 
 ## Features
@@ -48,6 +50,9 @@ A lightweight live audience response tool for university lectures. The lecturer 
 ---
 
 ## Getting started
+
+> **Lecturer?** See the [Quickstart guide](QUICKSTART.md) for a step-by-step walkthrough with screenshots.
+
 
 ### Prerequisites
 
