@@ -4,8 +4,8 @@
   "description": "Live audience response tool for university lectures",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "./start.sh",
+    "dev": "GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=true GIT_PAGER=cat node --watch server.js"
   },
   "dependencies": {
     "express": "^4.19.2",

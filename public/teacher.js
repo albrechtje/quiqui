@@ -3,7 +3,9 @@ const socket = io();
 // ─── State ────────────────────────────────────────────────────────────────────
 let questions = [];
 let selectedQuestion = null;
+let selectedIndex = -1;
 let currentSessionId = null;
+let currentTitle = null;
 let joined = 0;
 
 // Slug is the path segment this page was loaded from — used as the teacher token
@@ -28,7 +30,9 @@ const statJoined      = document.getElementById('stat-joined');
 const barChart        = document.getElementById('bar-chart');
 const btnActivate     = document.getElementById('btn-activate');
 const btnClose        = document.getElementById('btn-close');
+const btnNext         = document.getElementById('btn-next');
 const correctAnswer   = document.getElementById('correct-answer');
+const statusBadge     = document.getElementById('status-badge');
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
@@ -37,7 +41,10 @@ const correctAnswer   = document.getElementById('correct-answer');
   if (repo) repoInput.value = repo;
 
   btnPull.addEventListener('click', pullRepo);
+  repoInput.addEventListener('keydown', e => { if (e.key === 'Enter') pullRepo(); });
   fileSelect.addEventListener('change', loadFile);
+
+  if (repo) pullRepo();
 })();
 
 // ─── Repo pull ────────────────────────────────────────────────────────────────
@@ -66,10 +73,20 @@ async function pullRepo() {
       fileSelect.appendChild(opt);
     });
 
-    // If config provides a session slug, store it
-    if (data.config && data.config.session_id) {
-      currentSessionId = data.config.session_id;
+    if (data.config && data.config.session_url) {
+      currentSessionId = data.config.session_url;
     }
+
+    if (data.config && data.config.title) {
+      currentTitle = data.config.title;
+      const t = `QuiQui: ${currentTitle}`;
+      document.title = t;
+      document.getElementById('logo').textContent = t;
+    }
+
+    const url = new URL(window.location);
+    url.searchParams.set('repo', repo);
+    history.replaceState(null, '', url);
 
     pullStatus.textContent = `Pulled ${data.files.length} file(s).`;
     sectionQuestions.style.display = 'none';
@@ -120,6 +137,7 @@ function renderQuestionList() {
 }
 
 function selectQuestion(index) {
+  selectedIndex = index;
   selectedQuestion = questions[index];
 
   document.querySelectorAll('.q-item').forEach((el, i) => {
@@ -129,13 +147,13 @@ function selectQuestion(index) {
   activeQText.textContent = selectedQuestion.question;
   sectionActive.style.display = '';
 
-  // Reset panel to pre-activation state
-  badgeLive.style.display = 'none';
+  // Show preview state — answer options with empty bars, ready to activate
   joinInfo.style.display = 'none';
   liveStats.style.display = 'none';
-  barChart.innerHTML = '';
   btnActivate.style.display = '';
   btnClose.style.display = 'none';
+  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
+  setStatusBadge(null);
 
   if (selectedQuestion.correct) {
     correctAnswer.textContent = 'Correct: ' + selectedQuestion.correct;
@@ -143,6 +161,16 @@ function selectQuestion(index) {
   } else {
     correctAnswer.style.display = 'none';
   }
+
+  renderBarChart(selectedQuestion.answers, {}, 0);
+  sectionActive.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function setStatusBadge(state) {
+  // state: null | 'live' | 'closed'
+  statusBadge.textContent = state === 'live' ? '● Live' : state === 'closed' ? '◼ Closed' : '';
+  statusBadge.style.display = state ? '' : 'none';
+  statusBadge.className = 'badge-live' + (state === 'closed' ? ' badge-closed' : '');
 }
 
 // ─── Activate question ────────────────────────────────────────────────────────
@@ -158,12 +186,14 @@ function activateQuestion() {
     question: selectedQuestion,
     sessionId: currentSessionId,
     token: TEACHER_TOKEN,
+    title: currentTitle,
   });
 
   // Update UI immediately
-  badgeLive.style.display = '';
+  setStatusBadge('live');
   btnActivate.style.display = 'none';
   btnClose.style.display = '';
+  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
   liveStats.style.display = '';
   statAnswered.textContent = '0';
   statJoined.textContent = '0';
@@ -184,11 +214,19 @@ window.activateQuestion = activateQuestion;
 function closeVoting() {
   if (!currentSessionId) return;
   socket.emit('close-voting', { sessionId: currentSessionId, token: TEACHER_TOKEN });
-  badgeLive.style.display = 'none';
+  setStatusBadge('closed');
   btnClose.style.display = 'none';
   btnActivate.style.display = '';
+  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
 }
 window.closeVoting = closeVoting;
+
+function nextQuestion() {
+  if (selectedIndex < questions.length - 1) {
+    selectQuestion(selectedIndex + 1);
+  }
+}
+window.nextQuestion = nextQuestion;
 
 // ─── QR code ──────────────────────────────────────────────────────────────────
 async function fetchQR(url) {
@@ -210,9 +248,10 @@ socket.on('vote-update', ({ votes, total }) => {
 });
 
 socket.on('voting-closed', () => {
-  badgeLive.style.display = 'none';
+  setStatusBadge('closed');
   btnClose.style.display = 'none';
   btnActivate.style.display = '';
+  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
 });
 
 // ─── Bar chart ────────────────────────────────────────────────────────────────

@@ -223,6 +223,11 @@ select:focus {
   flex-shrink: 0;
 }
 
+.badge-closed {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+}
+
 /* ─── Join info ────────────────────────────────────────────────── */
 .join-row {
   display: flex;

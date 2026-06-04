@@ -15,7 +15,6 @@ const answerList      = document.getElementById('student-answer-list');
 const btnSubmit       = document.getElementById('btn-submit');
 const studentBarChart = document.getElementById('student-bar-chart');
 const resultMeta      = document.getElementById('student-result-meta');
-const votingClosedMsg = document.getElementById('voting-closed-msg');
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
   const sessionId = getSessionId();
@@ -34,20 +33,16 @@ function getSessionId() {
 // ─── Socket events ────────────────────────────────────────────────────────────
 
 // Initial state when joining
-socket.on('session-state', ({ question, votes, open, total }) => {
+socket.on('session-state', ({ question, open, title }) => {
+  if (title) applyTitle(title);
   if (question && open) {
     showQuestion(question);
-  } else if (question && !open) {
-    // Voting already closed — show results immediately
-    showQuestion(question);
-    showResults(votes, total, question);
-    votingClosedMsg.style.display = '';
   }
-  // else: no active question, stay on waiting screen
 });
 
 // Teacher pushes a new question
-socket.on('question-activated', ({ question }) => {
+socket.on('question-activated', ({ question, title }) => {
+  if (title) applyTitle(title);
   submitted = false;
   selected = [];
   showQuestion(question);
@@ -61,10 +56,12 @@ socket.on('vote-update', ({ votes, total }) => {
   }
 });
 
-// Voting closed by teacher
+// Voting closed by teacher — return to waiting screen
 socket.on('voting-closed', () => {
-  votingClosedMsg.style.display = '';
-  btnSubmit.disabled = true;
+  currentQuestion = null;
+  submitted = false;
+  selected = [];
+  showScreen('waiting');
 });
 
 // ─── Show question ────────────────────────────────────────────────────────────
@@ -166,6 +163,12 @@ function showScreen(name) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function applyTitle(title) {
+  const t = `QuiQui: ${title}`;
+  document.title = t;
+  document.getElementById('logo').textContent = t;
+}
+
 function escHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

@@ -57,7 +57,14 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
     await fs.promises.mkdir(QUESTIONS_DIR, { recursive: true });
 
     const git = simpleGit();
-    await git.clone(repo, QUESTIONS_DIR, ['--depth', '1']);
+
+    const cloneWithTimeout = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Clone timed out after 15 seconds')), 15000);
+      git.clone(repo, QUESTIONS_DIR, ['--depth', '1'])
+        .then(() => { clearTimeout(timeout); resolve(); })
+        .catch(err => { clearTimeout(timeout); reject(err); });
+    });
+    await cloneWithTimeout;
 
     // Read optional config.yaml
     let config = {};
@@ -75,7 +82,11 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
     res.json({ files, config });
   } catch (err) {
     console.error('Pull failed:', err.message);
-    res.status(500).json({ error: err.message });
+    const msg = err.message.includes('timed out') ? err.message
+      : err.message.includes('Repository not found') || err.message.includes('not found') ? 'Repository not found. Check the URL and make sure it is public.'
+      : err.message.includes('Authentication failed') || err.message.includes('could not read Username') ? 'Repository is private or requires authentication. Only public repositories are supported.'
+      : 'Clone failed: ' + err.message;
+    res.status(500).json({ error: msg });
   }
 });
 
@@ -138,6 +149,7 @@ io.on('connection', (socket) => {
         votes: session.votes,
         open: session.open,
         total: session.voters.size,
+        title: session.title || null,
       });
     } else {
       // No active session yet — student waits
@@ -146,11 +158,13 @@ io.on('connection', (socket) => {
   });
 
   // Teacher activates a question
-  socket.on('activate-question', ({ question, sessionId, token }) => {
+  socket.on('activate-question', ({ question, sessionId, token, title }) => {
     if (token !== TEACHER_SLUG) return;
+    socket.join(`session:${sessionId}`);
     session = {
       sessionId,
       activeQuestion: question,
+      title: title || null,
       votes: {},
       voters: new Set(),
       open: true,
@@ -160,7 +174,7 @@ io.on('connection', (socket) => {
 
     // Strip teacher-only fields before broadcasting to students
     const { correct, explanation, ...studentQuestion } = question;
-    io.to(`session:${sessionId}`).emit('question-activated', { question: studentQuestion, sessionId });
+    io.to(`session:${sessionId}`).emit('question-activated', { question: studentQuestion, sessionId, title: session.title });
   });
 
   // Student submits answer(s)

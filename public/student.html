@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QuiQui</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
 
   <div class="page-wrap page-wrap--narrow">
     <header class="top-bar">
-      <span class="logo">QuiQui</span>
+      <span class="logo" id="logo">QuiQui</span>
     </header>
 
     <main>
@@ -39,13 +39,12 @@
           <!-- populated by JS -->
         </div>
         <div class="meta-line" id="student-result-meta"></div>
-        <div class="voting-closed-msg" id="voting-closed-msg" style="display:none;">Voting closed</div>
       </section>
 
     </main>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="student.js"></script>
+  <script src="/student.js"></script>
 </body>
 </html>

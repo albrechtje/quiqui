@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QuiQui — Teacher</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
 
   <div class="page-wrap">
     <header class="top-bar">
-      <span class="logo">QuiQui</span>
+      <span class="logo" id="logo">QuiQui</span>
       <span class="top-bar-role">Teacher view</span>
     </header>
 
@@ -45,7 +45,7 @@
       <section class="card" id="section-active" style="display:none;">
         <div class="active-header">
           <div class="active-question-text" id="active-q-text"></div>
-          <span class="badge-live" id="badge-live" style="display:none;">● Live</span>
+          <span id="status-badge" style="display:none;"></span>
         </div>
 
         <!-- Join info (shown when active) -->
@@ -81,8 +81,9 @@
 
         <!-- Controls -->
         <div class="btn-row">
-          <button class="btn-primary" id="btn-activate" onclick="activateQuestion()">Activate question</button>
+          <button class="btn-primary" id="btn-activate" onclick="activateQuestion()">Activate</button>
           <button class="btn-secondary" id="btn-close" style="display:none;" onclick="closeVoting()">Close voting</button>
+          <button class="btn-secondary" id="btn-next" style="display:none;" onclick="nextQuestion()">Next question →</button>
         </div>
       </section>
 
@@ -90,6 +91,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="teacher.js"></script>
+  <script src="/teacher.js"></script>
 </body>
 </html>
