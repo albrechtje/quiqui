@@ -317,6 +317,28 @@ select:focus {
   text-overflow: ellipsis;
   color: var(--color-text-muted);
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+.bar-label:hover { color: var(--color-accent); }
+
+/* ─── Answer popover ───────────────────────────────────────────── */
+.answer-popover {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(480px, 90vw);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 100;
+  cursor: pointer;
+  word-break: break-word;
 }
 
 .bar-track {
@@ -456,6 +478,35 @@ select:focus {
   background: var(--color-accent);
   color: #E6F1FB;
 }
+
+.opt-bar-wrap {
+  display: none;
+  margin-top: 6px;
+  height: 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.opt-bar-wrap.visible { display: block; }
+
+.opt-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.answer-opt.selected .opt-bar-fill { background: var(--color-accent-dark); }
+
+.opt-bar-pct {
+  font-size: 11px;
+  color: var(--color-text-hint);
+  margin-top: 3px;
+  display: none;
+}
+
+.opt-bar-pct.visible { display: block; }
 
 /* ─── Footer ───────────────────────────────────────────────────── */
 .site-footer {

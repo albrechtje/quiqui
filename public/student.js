@@ -10,12 +10,10 @@ let submitted = false;
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 const screenWaiting   = document.getElementById('screen-waiting');
 const screenQuestion  = document.getElementById('screen-question');
-const screenResult    = document.getElementById('screen-result');
 const typeHint        = document.getElementById('type-hint');
 const questionText    = document.getElementById('student-q-text');
 const answerList      = document.getElementById('student-answer-list');
 const btnSubmit       = document.getElementById('btn-submit');
-const studentBarChart = document.getElementById('student-bar-chart');
 const resultMeta      = document.getElementById('student-result-meta');
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
@@ -51,15 +49,15 @@ socket.on('question-activated', ({ question, title }) => {
   if (title) applyTitle(title);
   submitted = false;
   selected = [];
+  sessionStorage.removeItem(answerKey(getSessionId(), question.question));
   showQuestion(question);
 });
 
 // New vote came in
 socket.on('vote-update', ({ votes, total }) => {
-  if (!currentQuestion) return;
-  if (submitted) {
-    showResults(votes, total, currentQuestion);
-  }
+  if (!currentQuestion || !submitted) return;
+  updateInlineBars(votes, total);
+  resultMeta.textContent = `${total} answer${total !== 1 ? 's' : ''} submitted`;
 });
 
 // Voting closed by teacher — return to waiting screen
@@ -91,12 +89,9 @@ socket.on('session-created', ({ title }) => {
 function showQuestion(question) {
   const sessionId = getSessionId();
   if (hasAnswered(sessionId, question.question)) {
-    // Already submitted this question — show waiting screen instead
+    // Already submitted — render question with bars visible but locked
     currentQuestion = question;
     submitted = true;
-    showScreen('waiting');
-    document.getElementById('waiting-msg').innerHTML = 'Answer already submitted.<span class="dot-anim"></span>';
-    return;
   }
 
   currentQuestion = question;
@@ -113,16 +108,24 @@ function showQuestion(question) {
     opt.dataset.index = i;
     opt.innerHTML = `
       <div class="opt-key">${keys[i] || i + 1}</div>
-      <div>${mdInline(ans)}</div>
+      <div style="flex:1">
+        <div>${mdInline(ans)}</div>
+        <div class="opt-bar-wrap" id="opt-bar-wrap-${i}">
+          <div class="opt-bar-fill" id="opt-bar-fill-${i}" style="width:0%"></div>
+        </div>
+        <div class="opt-bar-pct" id="opt-bar-pct-${i}"></div>
+      </div>
     `;
     opt.addEventListener('click', () => toggleAnswer(i, opt, question.type));
     answerList.appendChild(opt);
   });
 
-  btnSubmit.disabled = true;
-  submitted = false;
+  btnSubmit.disabled = submitted; // keep disabled if already answered
+  resultMeta.style.display = submitted ? '' : 'none';
+  if (submitted) resultMeta.textContent = 'Answer already submitted.';
 
   showScreen('question');
+  if (submitted) showInlineBars();
 }
 
 function toggleAnswer(index, el, type) {
@@ -155,37 +158,32 @@ function submitAnswer() {
   const sessionId = getSessionId();
   markAnswered(sessionId, currentQuestion.question);
   socket.emit('submit-answer', { sessionId, selected });
+
+  // Reveal bars immediately — they start at 0% and animate in on first vote-update
+  showInlineBars();
+  resultMeta.style.display = '';
+  resultMeta.textContent = 'Waiting for results…';
 }
 window.submitAnswer = submitAnswer;
 
-// ─── Show results ─────────────────────────────────────────────────────────────
-function showResults(votes, total, question) {
-  showScreen('result');
-  resultMeta.textContent = `${total} answer${total !== 1 ? 's' : ''} submitted`;
-  renderBarChart(question.answers, votes, total);
+// ─── Inline bar chart ─────────────────────────────────────────────────────────
+function showInlineBars() {
+  if (!currentQuestion) return;
+  currentQuestion.answers.forEach((_, i) => {
+    document.getElementById(`opt-bar-wrap-${i}`)?.classList.add('visible');
+    document.getElementById(`opt-bar-pct-${i}`)?.classList.add('visible');
+  });
 }
 
-function renderBarChart(answers, votes, total) {
-  studentBarChart.innerHTML = '';
-  answers.forEach((ans, i) => {
+function updateInlineBars(votes, total) {
+  if (!currentQuestion) return;
+  currentQuestion.answers.forEach((_, i) => {
     const count = (votes && votes[i]) || 0;
     const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-
-    const row = document.createElement('div');
-    row.className = 'bar-row';
-
-    // Highlight the student's own selection(s)
-    const isOwn = selected.includes(i);
-    row.innerHTML = `
-      <div class="bar-label" title="${escHtml(ans)}" style="${isOwn ? 'color:var(--color-accent-text);font-weight:500' : ''}">${mdInline(ans)}</div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${pct}%;${isOwn ? 'background:var(--color-accent-dark)' : ''}">
-          ${pct >= 15 ? `<span class="bar-pct-inside">${pct}%</span>` : ''}
-        </div>
-      </div>
-      <div class="bar-pct-outside">${pct < 15 ? pct + '%' : ''}&nbsp;(${count})</div>
-    `;
-    studentBarChart.appendChild(row);
+    const fill = document.getElementById(`opt-bar-fill-${i}`);
+    const pctEl = document.getElementById(`opt-bar-pct-${i}`);
+    if (fill) fill.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = `${pct}% (${count})`;
   });
 }
 
@@ -193,8 +191,28 @@ function renderBarChart(answers, votes, total) {
 function showScreen(name) {
   screenWaiting.style.display  = name === 'waiting'  ? '' : 'none';
   screenQuestion.style.display = name === 'question' ? '' : 'none';
-  screenResult.style.display   = name === 'result'   ? '' : 'none';
 }
+
+// ─── Answer popover ───────────────────────────────────────────────────────────
+
+let popover = null;
+
+function showAnswerPopover(text) {
+  hideAnswerPopover();
+  popover = document.createElement('div');
+  popover.className = 'answer-popover';
+  popover.textContent = text;
+  popover.addEventListener('click', hideAnswerPopover);
+  document.body.appendChild(popover);
+}
+
+function hideAnswerPopover() {
+  if (popover) { popover.remove(); popover = null; }
+}
+
+document.addEventListener('click', e => {
+  if (popover && !popover.contains(e.target)) hideAnswerPopover();
+});
 
 // ─── Session storage — prevent re-submission on refresh ───────────────────────
 

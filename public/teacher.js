@@ -271,25 +271,59 @@ socket.on('session-expired', () => {
 
 // ─── Bar chart ────────────────────────────────────────────────────────────────
 function renderBarChart(answers, votes, total) {
-  barChart.innerHTML = '';
-  answers.forEach((ans, i) => {
-    const count = votes[i] || 0;
-    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-
-    const row = document.createElement('div');
-    row.className = 'bar-row';
-    row.innerHTML = `
-      <div class="bar-label" title="${escHtml(ans)}">${mdInline(ans)}</div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${pct}%">
-          ${pct >= 15 ? `<span class="bar-pct-inside">${pct}%</span>` : ''}
+  // Build answer blocks on first call (when barChart is empty)
+  if (barChart.children.length !== answers.length) {
+    barChart.innerHTML = '';
+    const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
+    answers.forEach((ans, i) => {
+      const block = document.createElement('div');
+      block.className = 'answer-opt';
+      block.style.cursor = 'default';
+      block.innerHTML = `
+        <div class="opt-key">${keys[i] || i + 1}</div>
+        <div style="flex:1">
+          <div>${mdInline(ans)}</div>
+          <div class="opt-bar-wrap visible" id="t-bar-wrap-${i}">
+            <div class="opt-bar-fill" id="t-bar-fill-${i}" style="width:0%"></div>
+          </div>
+          <div class="opt-bar-pct visible" id="t-bar-pct-${i}">0% (0)</div>
         </div>
-      </div>
-      <div class="bar-pct-outside">${pct < 15 ? pct + '%' : ''}&nbsp;(${count})</div>
-    `;
-    barChart.appendChild(row);
+      `;
+      barChart.appendChild(block);
+    });
+  }
+
+  // Update bar values
+  answers.forEach((_, i) => {
+    const count = (votes && votes[i]) || 0;
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    const fill = document.getElementById(`t-bar-fill-${i}`);
+    const pctEl = document.getElementById(`t-bar-pct-${i}`);
+    if (fill) fill.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = `${pct}% (${count})`;
   });
 }
+
+// ─── Answer popover ───────────────────────────────────────────────────────────
+
+let popover = null;
+
+function showAnswerPopover(text) {
+  hideAnswerPopover();
+  popover = document.createElement('div');
+  popover.className = 'answer-popover';
+  popover.textContent = text;
+  popover.addEventListener('click', hideAnswerPopover);
+  document.body.appendChild(popover);
+}
+
+function hideAnswerPopover() {
+  if (popover) { popover.remove(); popover = null; }
+}
+
+document.addEventListener('click', e => {
+  if (popover && !popover.contains(e.target)) hideAnswerPopover();
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function escHtml(s) {
