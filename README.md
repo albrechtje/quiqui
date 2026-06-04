@@ -83,6 +83,8 @@ Or with auto-restart on file changes:
 npm run dev
 ```
 
+Both commands set the required git environment variables automatically (see `start.sh`). Do not run `node server.js` directly — git cloning will hang or fail without them.
+
 Then open:
 - Teacher page: `http://localhost:3000/teach` (or your configured slug)
 - Student page: `http://localhost:3000/join/<sessionId>` (shown as QR after activating a question)
@@ -129,10 +131,12 @@ Questions live in a public GitHub repository, one `.yaml` file per lecture. See 
 An optional `config.yaml` at the root of your question repo:
 
 ```yaml
-session_id: python101
+session_url: python101
+title: Python 101
 ```
 
-`session_id` sets a stable join URL for the session (e.g. `/join/python101`). Students can bookmark or stay on this URL across multiple questions in a lecture. If omitted, QuiQui generates a random short ID each time a question is activated.
+- `session_url` — sets a stable join URL for the session (e.g. `/join/python101`). Students can bookmark or stay on this URL across multiple questions in a lecture. If omitted, QuiQui generates a random short ID each time a question is activated.
+- `title` — optional display name shown in the header and browser tab of both teacher and student views, formatted as `QuiQui: <title>`.
 
 ---
 
@@ -142,6 +146,7 @@ session_id: python101
 quiqui/
 ├── server.js               # Express + Socket.io server, all backend logic
 ├── teacher.html            # Teacher view — served only via the slug route, not as a static file
+├── start.sh                # Sets required git env vars and launches server.js
 ├── package.json
 ├── .env.example            # Documents required environment variables
 └── public/                 # Served statically (no auth required)
@@ -150,6 +155,8 @@ quiqui/
     ├── teacher.js          # Teacher frontend logic
     └── student.js          # Student frontend logic
 ```
+
+**Why `start.sh`?** Node.js inherits the shell environment, which can include variables like `PAGER` or credential helpers that cause git to hang or throw security errors when cloning. `start.sh` sets `GIT_TERMINAL_PROMPT=0`, `GIT_ASKPASS=true`, and `GIT_PAGER=cat` to give git a clean, non-interactive environment. `npm start` and `npm run dev` call it automatically.
 
 **Why is `teacher.html` outside `public/`?**  
 Everything in `public/` is served statically and is publicly accessible by filename. Moving `teacher.html` to the project root means it can only be reached through the slug route — visiting `/teacher.html` directly returns 404.
