@@ -47,7 +47,11 @@ const statusBadge     = document.getElementById('status-badge');
   repoInput.addEventListener('keydown', e => { if (e.key === 'Enter') pullRepo(); });
   fileSelect.addEventListener('change', loadFile);
 
-  if (repo) pullRepo();
+  if (repo) {
+    pullRepo();
+  } else {
+    repoInput.select();
+  }
 })();
 
 function setStatus(msg, isError = false) {

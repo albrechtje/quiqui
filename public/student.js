@@ -89,6 +89,16 @@ socket.on('session-created', ({ title }) => {
 
 // ─── Show question ────────────────────────────────────────────────────────────
 function showQuestion(question) {
+  const sessionId = getSessionId();
+  if (hasAnswered(sessionId, question.question)) {
+    // Already submitted this question — show waiting screen instead
+    currentQuestion = question;
+    submitted = true;
+    showScreen('waiting');
+    document.getElementById('waiting-msg').innerHTML = 'Answer already submitted.<span class="dot-anim"></span>';
+    return;
+  }
+
   currentQuestion = question;
   selected = [];
 
@@ -143,6 +153,7 @@ function submitAnswer() {
   btnSubmit.disabled = true;
 
   const sessionId = getSessionId();
+  markAnswered(sessionId, currentQuestion.question);
   socket.emit('submit-answer', { sessionId, selected });
 }
 window.submitAnswer = submitAnswer;
@@ -183,6 +194,21 @@ function showScreen(name) {
   screenWaiting.style.display  = name === 'waiting'  ? '' : 'none';
   screenQuestion.style.display = name === 'question' ? '' : 'none';
   screenResult.style.display   = name === 'result'   ? '' : 'none';
+}
+
+// ─── Session storage — prevent re-submission on refresh ───────────────────────
+
+function answerKey(sessionId, question) {
+  // Short key from sessionId + first 40 chars of question text
+  return `answered:${sessionId}:${question.slice(0, 40)}`;
+}
+
+function markAnswered(sessionId, question) {
+  sessionStorage.setItem(answerKey(sessionId, question), '1');
+}
+
+function hasAnswered(sessionId, question) {
+  return sessionStorage.getItem(answerKey(sessionId, question)) === '1';
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
