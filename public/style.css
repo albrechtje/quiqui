@@ -75,6 +75,17 @@ body {
 
 .top-bar-help:hover { color: var(--color-accent); }
 
+.connection-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4caf50;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.connection-indicator--off { background: #e53935; }
+
 .qr-note {
   font-size: 11px;
   color: var(--color-text-hint);

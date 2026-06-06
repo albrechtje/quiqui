@@ -64,6 +64,49 @@ function repoDirName(repoUrl) {
     .slice(0, 64);
 }
 
+const MAX_ANSWERS = 6;
+const VALID_TYPES = new Set(['single', 'multiple']);
+const VALID_LETTERS = new Set('abcdefghijklmnopqrstuvwxyz'.slice(0, MAX_ANSWERS).split(''));
+
+// Validate a parsed question list from a YAML file. Returns an error string or null.
+function validateQuestions(questions, file) {
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return `${file}: must contain a non-empty list of questions.`;
+  }
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    const label = `${file}, question ${i + 1}`;
+
+    if (!q || typeof q !== 'object') return `${label}: not a valid object.`;
+    if (typeof q.question !== 'string' || !q.question.trim())
+      return `${label}: "question" must be a non-empty string.`;
+    if (!VALID_TYPES.has(q.type))
+      return `${label}: "type" must be "single" or "multiple" (got ${JSON.stringify(q.type)}).`;
+    if (!Array.isArray(q.answers) || q.answers.length < 2)
+      return `${label}: "answers" must be a list of at least 2 options.`;
+    if (q.answers.length > MAX_ANSWERS)
+      return `${label}: "answers" has ${q.answers.length} options — maximum is ${MAX_ANSWERS}.`;
+    if (q.answers.some(a => typeof a !== 'string' || !a.trim()))
+      return `${label}: every answer must be a non-empty string.`;
+
+    // Validate correct field
+    const letters = Array.isArray(q.correct) ? q.correct : (q.correct != null ? [q.correct] : []);
+    if (letters.length === 0)
+      return `${label}: "correct" is required — provide the correct answer letter(s), e.g. correct: B`;
+    for (const l of letters) {
+      const ch = String(l).trim()[0]?.toLowerCase();
+      if (!ch || !VALID_LETTERS.has(ch))
+        return `${label}: "correct" contains invalid letter ${JSON.stringify(l)} — use A–${String.fromCharCode(64 + MAX_ANSWERS)}.`;
+      const idx = ch.charCodeAt(0) - 97;
+      if (idx >= q.answers.length)
+        return `${label}: "correct" refers to ${String(l).trim()[0].toUpperCase()} but there are only ${q.answers.length} answers.`;
+    }
+    if (q.type === 'single' && letters.length > 1)
+      return `${label}: type is "single" but "correct" lists ${letters.length} answers.`;
+  }
+  return null;
+}
+
 // Normalise the correct field (array or single value) to 0-based answer indices.
 // Accepts e.g. ['A','b','C'], 'B', or a bare YAML letter that js-yaml parsed as a string.
 function toCorrectIndices(correct) {
@@ -322,6 +365,7 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
       // Same repo pulled again — refresh directory and activity
       existing.questionsDir = questionsDir;
       existing.title = config.title || null;
+      existing.answersRevealed = false;
       existing.lastActivity = Date.now();
     }
 
@@ -362,6 +406,8 @@ app.get('/api/questions', requireTeacher, async (req, res) => {
       return res.status(400).json({ error: `File is too large (${Math.round(size / 1024)} KB). Maximum allowed size is ${FILE_SIZE_LIMIT_KB} KB.` });
     }
     const questions = yaml.load(fs.readFileSync(filePath, 'utf8'));
+    const validationError = validateQuestions(questions, safe);
+    if (validationError) return res.status(400).json({ error: validationError });
     touchSession(sessionId);
     res.json({ questions });
   } catch (err) {
@@ -485,8 +531,9 @@ io.on('connection', (socket) => {
     if (!s || !s.open) return;
     if (s.voters.has(socket.id)) return; // deduplicated by socket ID
 
-    // Cap selections to the number of actual answers to prevent inflated counts
-    if (!Array.isArray(selected) || selected.length > s.activeQuestion.answers.length) return;
+    // Validate selections: must be a non-empty array of valid integer indices
+    if (!Array.isArray(selected) || selected.length === 0 || selected.length > s.activeQuestion.answers.length) return;
+    if (selected.some(i => !Number.isInteger(i) || i < 0 || i >= s.activeQuestion.answers.length)) return;
 
     s.voters.add(socket.id);
     selected.forEach(idx => {

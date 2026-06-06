@@ -32,6 +32,7 @@ const btnActivate     = document.getElementById('btn-activate');
 const btnShowAnswer   = document.getElementById('btn-show-answer');
 const btnClose        = document.getElementById('btn-close');
 const btnNext         = document.getElementById('btn-next');
+const explanationEl   = document.getElementById('explanation');
 const statusBadge     = document.getElementById('status-badge');
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -170,6 +171,13 @@ function selectQuestion(index) {
   btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
   setStatusBadge(null);
 
+  if (selectedQuestion.explanation) {
+    explanationEl.textContent = selectedQuestion.explanation;
+    explanationEl.style.display = '';
+  } else {
+    explanationEl.style.display = 'none';
+  }
+
   renderBarChart(selectedQuestion.answers, {}, 0);
   sectionActive.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -243,6 +251,19 @@ async function fetchQR(url) {
     qrImg.style.display = '';
   } catch (_) {}
 }
+
+// ─── Connection indicator ─────────────────────────────────────────────────────
+const connectionIndicator = document.getElementById('connection-indicator');
+
+socket.on('connect', () => {
+  connectionIndicator.classList.remove('connection-indicator--off');
+  connectionIndicator.title = 'Connected';
+});
+
+socket.on('disconnect', () => {
+  connectionIndicator.classList.add('connection-indicator--off');
+  connectionIndicator.title = 'Disconnected — reconnecting…';
+});
 
 // ─── Socket events ────────────────────────────────────────────────────────────
 socket.on('vote-update', ({ votes, total }) => {

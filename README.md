@@ -1,6 +1,6 @@
 # QuiQui
 
-A lightweight live audience response tool for university lectures. The lecturer poses an activating question, students answer on their own devices, and the class sees a live bar chart of the distribution — no correct answer revealed, just a moment for discussion.
+A lightweight live audience response tool for university lectures. The lecturer poses a question, students answer on their own devices, and the class sees a live bar chart of the distribution. The teacher can optionally reveal correct answers at any time.
 
 > Deliberately minimal: no accounts, no app installs, no scoring. Requires just a github repo with your questions in yaml.
 
@@ -79,7 +79,7 @@ Then open:
 
 Questions live in a **public GitHub repository**, one `.yaml` file per lecture. See [albrechtje/quiqui-questions](https://github.com/albrechtje/quiqui-questions) for the full format reference and working examples.
 
-> **Limits:** QuiQui checks the repository size via the GitHub API before cloning and rejects repos larger than **1 MB**. Individual question files larger than **100 KB** are also rejected when loaded. In practice a full lecture file is well under 50 KB.
+> **Limits:** QuiQui checks the repository size via the GitHub API before cloning and rejects repos larger than **1 MB**. Individual question files larger than **100 KB** are rejected when loaded. Each question may have at most **6 answer options**. YAML files are validated on load — format errors are shown as a clear error message in the teacher view.
 
 ---
 

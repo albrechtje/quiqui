@@ -47,6 +47,8 @@ QuiQui lets you pose a question to your class and see live answers on screen —
 
 Students visit the join URL or scan the QR code — no login, no app install. They see "Waiting for the lecturer" until you activate a question. After submitting their answer (only once per question), the result bars appear live under each answer option. When you close voting they return to the waiting screen automatically.
 
+If a student hasn't voted when you click **Show answer** or **Close voting**, they see "Voting has ended." and the bars — but cannot submit.
+
 If a student refreshes the page after submitting, they see the question with bars but cannot submit again.
 
 ---

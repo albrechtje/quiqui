@@ -13,6 +13,7 @@
     <header class="top-bar">
       <img src="/quiqui-logo.png" alt="QuiQui" class="logo" id="logo" />
       <span class="top-bar-role">Teacher View</span>
+      <span class="connection-indicator" id="connection-indicator" title="Disconnected — reconnecting…"></span>
       <a class="top-bar-help" href="https://github.com/albrechtje/quiqui" target="_blank" rel="noopener">Help</a>
     </header>
 
@@ -69,6 +70,9 @@
         <div class="bar-wrap" id="bar-chart">
           <!-- populated by JS -->
         </div>
+
+        <!-- Explanation (teacher only) -->
+        <div class="meta-line" id="explanation" style="display:none;"></div>
 
         <!-- Controls -->
         <div class="btn-row">

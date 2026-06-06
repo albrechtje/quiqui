@@ -37,6 +37,10 @@ socket.on('session-state', ({ exists, question, open, title, answersRevealed, co
   if (title) applyTitle(title);
   if (question && (open || answersRevealed)) {
     showQuestion(question);
+    if (!open && !submitted) {
+      resultMeta.style.display = '';
+      resultMeta.textContent = 'Voting has ended.';
+    }
     if (answersRevealed) highlightCorrect(correctIndices);
   } else {
     document.getElementById('waiting-msg').innerHTML = exists
@@ -64,12 +68,15 @@ socket.on('vote-update', ({ votes, total }) => {
 // Teacher revealed correct answers — highlight them, disable submit, show bars
 socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
   if (!currentQuestion) return;
+  const hadSubmitted = submitted;
   submitted = true;
   btnSubmit.disabled = true;
   showInlineBars();
   updateInlineBars(votes, total);
   resultMeta.style.display = '';
-  resultMeta.textContent = `${total} answer${total !== 1 ? 's' : ''} submitted`;
+  resultMeta.textContent = hadSubmitted
+    ? `${total} answer${total !== 1 ? 's' : ''} submitted`
+    : 'Voting has ended.';
   highlightCorrect(correctIndices);
 });
 
