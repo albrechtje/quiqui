@@ -49,7 +49,7 @@ socket.on('session-state', ({ exists, question, open, title, answersRevealed, de
     if (answersRevealed) highlightCorrect(correctIndices);
   } else {
     document.getElementById('waiting-msg').innerHTML = exists
-      ? 'Waiting for the next question<span class="dot-anim"></span>'
+      ? 'Waiting for the next question'
       : 'No quiz session active at this URL.';
   }
 });
@@ -124,7 +124,7 @@ socket.on('session-expired', () => {
 socket.on('session-created', ({ title }) => {
   if (title) applyTitle(title);
   if (!currentQuestion) {
-    document.getElementById('waiting-msg').innerHTML = 'Waiting for the next question<span class="dot-anim"></span>';
+    document.getElementById('waiting-msg').innerHTML = 'Waiting for the next question';
   }
 });
 
