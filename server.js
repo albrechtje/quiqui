@@ -449,7 +449,7 @@ function expireSession(sessionId) {
   const s = sessions.get(sessionId);
   if (!s) return;
   s.open = false;
-  io.to(`session:${sessionId}`).emit('voting-closed');
+  io.to(`session:${sessionId}`).emit('question-closed');
   io.to(`session:${sessionId}`).emit('session-expired');
   io.emit('session-expired');
   // Clean up cloned files
@@ -477,11 +477,12 @@ io.on('connection', (socket) => {
         open: s.open,
         total: s.voters.size,
         title: s.title || null,
-        answersRevealed: s.answersRevealed || false,
-        correctIndices: s.answersRevealed ? correctIndices : [],
+        answersRevealed: s.answersRevealed,
+        deactivated: !s.open && !s.answersRevealed,
+        correctIndices,
       });
     } else {
-      socket.emit('session-state', { exists: !!s, question: null, votes: null, open: false, total: 0, title: s ? s.title || null : null, answersRevealed: false, correctIndices: [] });
+      socket.emit('session-state', { exists: !!s, question: null, votes: null, open: false, total: 0, title: s ? s.title || null : null, answersRevealed: false, deactivated: false, correctIndices: [] });
     }
   });
 
@@ -493,36 +494,57 @@ io.on('connection', (socket) => {
     if (!s) return;
 
     socket.join(`session:${sessionId}`);
-    s.activeQuestion = question;
     s.title = title || null;
-    s.votes = {};
-    s.voters = new Set();
     s.open = true;
     s.answersRevealed = false;
     touchSession(sessionId);
 
-    // Initialise vote counts
-    question.answers.forEach((_, i) => { s.votes[i] = 0; });
+    const sameQuestion = s.activeQuestion && s.activeQuestion.question === question.question;
+    if (!sameQuestion) {
+      s.votes = {};
+      s.voters = new Set();
+      question.answers.forEach((_, i) => { s.votes[i] = 0; });
+    }
+    s.activeQuestion = question;
 
     // Strip teacher-only fields before broadcasting to students
     const { correct, explanation, ...studentQuestion } = question;
     io.to(`session:${sessionId}`).emit('question-activated', { question: studentQuestion, sessionId, title: s.title });
   });
 
-  // Teacher reveals correct answers — closes voting implicitly and broadcasts highlighted indices
+  // Teacher deactivates — voting closes, students see bars without highlights
+  socket.on('deactivate-question', ({ sessionId, token }) => {
+    if (token !== TEACHER_SLUG) return;
+    const s = sessions.get(sessionId);
+    if (!s || !s.activeQuestion) return;
+    s.open = false;
+    s.answersRevealed = false;
+    touchSession(sessionId);
+    io.to(`session:${sessionId}`).emit('question-deactivated', { votes: s.votes, total: s.voters.size });
+  });
+
+  // Teacher reveals correct answers — broadcasts highlighted indices
   socket.on('show-answer', ({ sessionId, token }) => {
     if (token !== TEACHER_SLUG) return;
     const s = sessions.get(sessionId);
     if (!s || !s.activeQuestion) return;
-
     s.open = false;
     s.answersRevealed = true;
     touchSession(sessionId);
-
-    // Convert letter list (e.g. ['A','b','C'] or a single string 'B') to 0-based indices
     const correctIndices = toCorrectIndices(s.activeQuestion.correct);
-
     io.to(`session:${sessionId}`).emit('answer-revealed', { correctIndices, votes: s.votes, total: s.voters.size });
+  });
+
+  // Teacher closes — students sent to waiting screen, question cleared
+  socket.on('close-question', ({ sessionId, token }) => {
+    if (token !== TEACHER_SLUG) return;
+    const s = sessions.get(sessionId);
+    if (!s) return;
+    s.open = false;
+    s.answersRevealed = false;
+    s.activeQuestion = null;
+    touchSession(sessionId);
+    io.to(`session:${sessionId}`).emit('question-closed');
   });
 
   // Student submits answer(s)
@@ -544,15 +566,6 @@ io.on('connection', (socket) => {
     io.to(`session:${sessionId}`).emit('vote-update', { votes: s.votes, total });
   });
 
-  // Teacher closes voting — token checked same as activate-question
-  socket.on('close-voting', ({ sessionId, token }) => {
-    if (token !== TEACHER_SLUG) return;
-    const s = sessions.get(sessionId);
-    if (!s) return;
-    s.open = false;
-    touchSession(sessionId);
-    io.to(`session:${sessionId}`).emit('voting-closed');
-  });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────

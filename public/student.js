@@ -33,11 +33,16 @@ function getSessionId() {
 // ─── Socket events ────────────────────────────────────────────────────────────
 
 // Initial state when joining
-socket.on('session-state', ({ exists, question, open, title, answersRevealed, correctIndices }) => {
+socket.on('session-state', ({ exists, question, open, title, answersRevealed, deactivated, correctIndices }) => {
   if (title) applyTitle(title);
-  if (question && (open || answersRevealed)) {
+  if (question && (open || deactivated || answersRevealed)) {
     showQuestion(question);
-    if (!open && !submitted) {
+    if (deactivated || (answersRevealed && !open)) {
+      submitted = true;
+      btnSubmit.disabled = true;
+      showInlineBars();
+    }
+    if (deactivated) {
       resultMeta.style.display = '';
       resultMeta.textContent = 'Voting has ended.';
     }
@@ -65,6 +70,17 @@ socket.on('vote-update', ({ votes, total }) => {
   resultMeta.textContent = `${total} answer${total !== 1 ? 's' : ''} submitted`;
 });
 
+// Teacher deactivated — show bars without highlights, disable submit
+socket.on('question-deactivated', ({ votes, total }) => {
+  if (!currentQuestion) return;
+  submitted = true;
+  btnSubmit.disabled = true;
+  showInlineBars();
+  updateInlineBars(votes, total);
+  resultMeta.style.display = '';
+  resultMeta.textContent = 'Voting has ended.';
+});
+
 // Teacher revealed correct answers — highlight them, disable submit, show bars
 socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
   if (!currentQuestion) return;
@@ -80,8 +96,8 @@ socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
   highlightCorrect(correctIndices);
 });
 
-// Voting closed by teacher — return to waiting screen
-socket.on('voting-closed', () => {
+// Teacher closed — return to waiting screen
+socket.on('question-closed', () => {
   currentQuestion = null;
   submitted = false;
   selected = [];

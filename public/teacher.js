@@ -15,25 +15,26 @@ let revealedCorrectIndices = [];
 const TEACHER_TOKEN = window.location.pathname.replace(/^\//, '').split('/')[0];
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
-const repoInput       = document.getElementById('repo-url');
-const btnPull         = document.getElementById('btn-pull');
-const fileSelect      = document.getElementById('file-select');
-const pullStatus      = document.getElementById('pull-status');
+const repoInput        = document.getElementById('repo-url');
+const btnPull          = document.getElementById('btn-pull');
+const fileSelect       = document.getElementById('file-select');
+const pullStatus       = document.getElementById('pull-status');
 const sectionQuestions = document.getElementById('section-questions');
-const questionList    = document.getElementById('question-list');
-const sectionActive   = document.getElementById('section-active');
-const activeQText     = document.getElementById('active-q-text');
-const joinInfo        = document.getElementById('join-info');
-const qrImg           = document.getElementById('qr-img');
-const joinUrlEl       = document.getElementById('join-url');
+const questionList     = document.getElementById('question-list');
+const sectionActive    = document.getElementById('section-active');
+const activeQText      = document.getElementById('active-q-text');
+const joinInfo         = document.getElementById('join-info');
+const qrImg            = document.getElementById('qr-img');
+const joinUrlEl        = document.getElementById('join-url');
 const statAnsweredBadge = document.getElementById('stat-answered-badge');
-const barChart        = document.getElementById('bar-chart');
-const btnActivate     = document.getElementById('btn-activate');
-const btnShowAnswer   = document.getElementById('btn-show-answer');
-const btnClose        = document.getElementById('btn-close');
-const btnNext         = document.getElementById('btn-next');
-const explanationEl   = document.getElementById('explanation');
-const statusBadge     = document.getElementById('status-badge');
+const barChart         = document.getElementById('bar-chart');
+const btnActivate      = document.getElementById('btn-activate');
+const btnShowAnswer    = document.getElementById('btn-show-answer');
+const btnClose         = document.getElementById('btn-close');
+const btnNext          = document.getElementById('btn-next');
+const explanationEl    = document.getElementById('explanation');
+const statusBadge      = document.getElementById('status-badge');
+const connectionIndicator = document.getElementById('connection-indicator');
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (function init() {
@@ -97,14 +98,17 @@ async function pullRepo() {
       document.title = `QuiQui: ${currentTitle}`;
     }
 
-
     const url = new URL(window.location);
     url.searchParams.set('repo', repo);
     history.replaceState(null, '', url);
 
     setStatus(`Pulled ${data.files.length} file(s).`);
     sectionQuestions.style.display = 'none';
+    sectionActive.style.display = 'none';
     questionList.innerHTML = '';
+    selectedQuestion = null;
+    selectedIndex = -1;
+    revealedCorrectIndices = [];
   } catch (err) {
     setStatus('Error: ' + err.message, true);
   } finally {
@@ -125,10 +129,11 @@ async function loadFile() {
     if (!res.ok) throw new Error(data.error);
 
     questions = data.questions || [];
+    selectedQuestion = null;
+    selectedIndex = -1;
     renderQuestionList();
     sectionQuestions.style.display = '';
     sectionActive.style.display = 'none';
-    selectedQuestion = null;
   } catch (err) {
     setStatus('Error loading file: ' + err.message, true);
   }
@@ -151,6 +156,7 @@ function renderQuestionList() {
 }
 
 function selectQuestion(index) {
+  if (currentSessionId) socket.emit('close-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
   selectedIndex = index;
   selectedQuestion = questions[index];
   revealedCorrectIndices = [];
@@ -162,17 +168,16 @@ function selectQuestion(index) {
   activeQText.innerHTML = mdHtml(selectedQuestion.question);
   sectionActive.style.display = '';
 
-  // Show preview state — answer options with empty bars, ready to activate
   statAnsweredBadge.textContent = '0 answered';
   statAnsweredBadge.style.display = '';
-  btnActivate.disabled = false;
-  btnShowAnswer.disabled = true;
-  btnClose.disabled = true;
-  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
-  setStatusBadge(null);
+  setState('inactive');
 
   if (selectedQuestion.explanation) {
-    explanationEl.textContent = selectedQuestion.explanation;
+    const correct = selectedQuestion.correct;
+    const letters = (Array.isArray(correct) ? correct : [correct])
+      .map(l => String(l).trim()[0].toUpperCase())
+      .join(', ');
+    explanationEl.textContent = `${letters}: ${selectedQuestion.explanation}`;
     explanationEl.style.display = '';
   } else {
     explanationEl.style.display = 'none';
@@ -182,61 +187,89 @@ function selectQuestion(index) {
   sectionActive.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function setStatusBadge(state) {
-  // state: null | 'live' | 'closed'
-  statusBadge.textContent = state === 'live' ? '● Live' : state === 'closed' ? '◼ Closed' : '';
+// ─── State machine ────────────────────────────────────────────────────────────
+// States: 'inactive' | 'active' | 'deactivated' | 'revealed' | 'closed'
+// 'inactive'    — teacher preview, students on waiting screen
+// 'active'      — voting open
+// 'deactivated' — voting closed, students see bars (no highlights)
+// 'revealed'    — voting closed, students see bars + highlights
+// 'closed'      — students on waiting screen, activeQuestion cleared
+
+function setState(state) {
+  const labels = {
+    inactive:    '◌ Inactive',
+    active:      '● Live',
+    deactivated: '◼ Deactivated',
+    revealed:    '◼ Revealed',
+    closed:      '◼ Closed',
+  };
+  const badgeMod = state === 'active' ? '' : state === 'inactive' ? ' badge-inactive' : ' badge-closed';
+  statusBadge.textContent = labels[state] || '';
   statusBadge.style.display = state ? '' : 'none';
-  statusBadge.className = 'badge-live' + (state === 'closed' ? ' badge-closed' : '');
+  statusBadge.className = 'badge-live' + badgeMod;
+
+  // Activate button toggles label based on state
+  btnActivate.textContent = state === 'active' ? '⏹ Deactivate' : '▶ Activate';
+  btnActivate.className   = state === 'active' ? 'btn-secondary' : 'btn-primary';
+
+  // disabled=true per state:
+  //               Activate  Reveal  Close
+  // inactive          ✗       ✓      ✓
+  // active            ✗       ✗      ✗
+  // deactivated       ✗       ✗      ✗
+  // revealed          ✗       ✓      ✗
+  // closed            ✗       ✓      ✓
+  const cfg = {
+    inactive:    { activate: false, reveal: true,  close: true  },
+    active:      { activate: false, reveal: false, close: false },
+    deactivated: { activate: false, reveal: false, close: false },
+    revealed:    { activate: false, reveal: true,  close: false },
+    closed:      { activate: false, reveal: true,  close: true  },
+  }[state];
+  btnActivate.disabled   = cfg.activate;
+  btnShowAnswer.disabled = cfg.reveal;
+  btnClose.disabled      = cfg.close;
+  updateNextBtn();
 }
 
-// ─── Activate question ────────────────────────────────────────────────────────
+function updateNextBtn() {
+  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
+}
+
+// ─── Activate / Deactivate toggle ─────────────────────────────────────────────
 function activateQuestion() {
   if (!selectedQuestion || sessionExpired) return;
-
-  socket.emit('activate-question', {
-    question: selectedQuestion,
-    sessionId: currentSessionId,
-    token: TEACHER_TOKEN,
-    title: currentTitle,
-  });
-
-  // Update UI immediately
-  setStatusBadge('live');
-  btnActivate.disabled = true;
-  btnShowAnswer.disabled = false;
-  btnClose.disabled = false;
-  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
+  if (btnActivate.textContent.startsWith('⏹')) {
+    // Currently active — deactivate
+    socket.emit('deactivate-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
+  } else {
+    socket.emit('activate-question', {
+      question: selectedQuestion,
+      sessionId: currentSessionId,
+      token: TEACHER_TOKEN,
+      title: currentTitle,
+    });
+    setState('active');
+  }
 }
 window.activateQuestion = activateQuestion;
 
-// ─── Close voting ─────────────────────────────────────────────────────────────
-function closeVoting() {
-  if (!currentSessionId) return;
-  socket.emit('close-voting', { sessionId: currentSessionId, token: TEACHER_TOKEN });
-  setStatusBadge('closed');
-  btnClose.disabled = true;
-  btnShowAnswer.disabled = false;
-  btnActivate.disabled = false;
-  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
-}
-window.closeVoting = closeVoting;
-
-// ─── Show answer ──────────────────────────────────────────────────────────────
-function showAnswer() {
+// ─── Reveal answer ────────────────────────────────────────────────────────────
+function revealAnswer() {
   if (!currentSessionId || !selectedQuestion) return;
   socket.emit('show-answer', { sessionId: currentSessionId, token: TEACHER_TOKEN });
-  setStatusBadge('closed');
-  btnShowAnswer.disabled = true;
-  btnClose.disabled = false;
-  btnActivate.disabled = false;
-  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
 }
-window.showAnswer = showAnswer;
+window.revealAnswer = revealAnswer;
+
+// ─── Close question ───────────────────────────────────────────────────────────
+function closeQuestion() {
+  if (!currentSessionId) return;
+  socket.emit('close-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
+}
+window.closeQuestion = closeQuestion;
 
 function nextQuestion() {
-  if (selectedIndex < questions.length - 1) {
-    selectQuestion(selectedIndex + 1);
-  }
+  if (selectedIndex < questions.length - 1) selectQuestion(selectedIndex + 1);
 }
 window.nextQuestion = nextQuestion;
 
@@ -253,8 +286,6 @@ async function fetchQR(url) {
 }
 
 // ─── Connection indicator ─────────────────────────────────────────────────────
-const connectionIndicator = document.getElementById('connection-indicator');
-
 socket.on('connect', () => {
   connectionIndicator.classList.remove('connection-indicator--off');
   connectionIndicator.title = 'Connected';
@@ -272,12 +303,11 @@ socket.on('vote-update', ({ votes, total }) => {
   renderBarChart(selectedQuestion.answers, votes, total, revealedCorrectIndices);
 });
 
-socket.on('voting-closed', () => {
-  setStatusBadge('closed');
-  btnClose.disabled = true;
-  btnShowAnswer.disabled = false;
-  btnActivate.disabled = false;
-  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
+socket.on('question-deactivated', ({ votes, total }) => {
+  if (!selectedQuestion) return;
+  statAnsweredBadge.textContent = `${total} answered`;
+  renderBarChart(selectedQuestion.answers, votes, total, []);
+  setState('deactivated');
 });
 
 socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
@@ -285,16 +315,21 @@ socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
   revealedCorrectIndices = correctIndices;
   statAnsweredBadge.textContent = `${total} answered`;
   renderBarChart(selectedQuestion.answers, votes, total, correctIndices);
+  setState('revealed');
+});
+
+socket.on('question-closed', () => {
+  setState('closed');
 });
 
 socket.on('session-expired', () => {
   sessionExpired = true;
   currentSessionId = null;
-  setStatusBadge('closed');
-  btnClose.disabled = true;
-  btnShowAnswer.disabled = true;
   btnActivate.disabled = true;
+  btnShowAnswer.disabled = true;
+  btnClose.disabled = true;
   btnNext.style.display = 'none';
+  statusBadge.style.display = 'none';
   setStatus('Session has expired. Pull the repo again to start a new session.', true);
 });
 
@@ -333,10 +368,5 @@ function previewQuestion(s) {
     .trim();
 }
 
-function mdHtml(s) {
-  return marked.parse(s);
-}
-
-function mdInline(s) {
-  return marked.parseInline(s);
-}
+function mdHtml(s) { return marked.parse(s); }
+function mdInline(s) { return marked.parseInline(s); }

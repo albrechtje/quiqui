@@ -266,6 +266,11 @@ select:focus {
   color: var(--color-text-muted);
 }
 
+.badge-inactive {
+  background: #fff8e1;
+  color: #e65100;
+}
+
 /* ─── Join info ────────────────────────────────────────────────── */
 .join-row {
   display: flex;

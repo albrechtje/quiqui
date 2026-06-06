@@ -32,10 +32,10 @@ QuiQui lets you pose a question to your class and see live answers on screen —
 1. **Open your bookmarked teacher URL** — the repo is pulled automatically and the QR code appears
 2. **Project the QR code** so students can join (or share the URL verbally)
 3. **Select a lecture file** from the dropdown, then click a question to preview it
-4. **Click Activate** — voting opens and the bar chart updates live under each answer
+4. **Click Activate** — voting opens; the badge in the top-right changes to **● Live**
 5. **Click Show answer** at any time to reveal the correct answers — voting closes implicitly and the correct options are highlighted in green for everyone in the room
 6. **Click Close voting** to end voting without revealing answers — students return to the waiting screen
-7. **Click Next question →** to move on, or pick any question from the list
+7. **Click Next question →** or pick any question from the list — voting closes automatically and students return to the waiting screen
 
 > **Tip:** Open the teacher page a minute before class — the app may take ~30 seconds to wake up on the free Render plan.
 
