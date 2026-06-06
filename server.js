@@ -64,6 +64,17 @@ function repoDirName(repoUrl) {
     .slice(0, 64);
 }
 
+// Normalise the correct field (array or single value) to 0-based answer indices.
+// Accepts e.g. ['A','b','C'], 'B', or a bare YAML letter that js-yaml parsed as a string.
+function toCorrectIndices(correct) {
+  const letters = Array.isArray(correct) ? correct : (correct ? [correct] : []);
+  return letters
+    .map(l => String(l).trim()[0]?.toLowerCase())  // take only the first character
+    .filter(Boolean)
+    .map(l => 'abcdefghijklmnopqrstuvwxyz'.indexOf(l))
+    .filter(i => i >= 0);
+}
+
 function touchSession(sessionId) {
   const s = sessions.get(sessionId);
   if (s) s.lastActivity = Date.now();
@@ -302,6 +313,7 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
         votes: {},
         voters: new Set(),
         open: false,
+        answersRevealed: false,
         lastActivity: Date.now(),
       });
       // Notify any students already waiting at this URL
@@ -411,6 +423,7 @@ io.on('connection', (socket) => {
     const s = sessions.get(sessionId);
     if (s && s.activeQuestion) {
       const { correct, explanation, ...studentQuestion } = s.activeQuestion;
+      const correctIndices = s.answersRevealed ? toCorrectIndices(s.activeQuestion.correct) : [];
       socket.emit('session-state', {
         exists: true,
         question: studentQuestion,
@@ -418,9 +431,11 @@ io.on('connection', (socket) => {
         open: s.open,
         total: s.voters.size,
         title: s.title || null,
+        answersRevealed: s.answersRevealed || false,
+        correctIndices: s.answersRevealed ? correctIndices : [],
       });
     } else {
-      socket.emit('session-state', { exists: !!s, question: null, votes: null, open: false, total: 0, title: s ? s.title || null : null });
+      socket.emit('session-state', { exists: !!s, question: null, votes: null, open: false, total: 0, title: s ? s.title || null : null, answersRevealed: false, correctIndices: [] });
     }
   });
 
@@ -437,6 +452,7 @@ io.on('connection', (socket) => {
     s.votes = {};
     s.voters = new Set();
     s.open = true;
+    s.answersRevealed = false;
     touchSession(sessionId);
 
     // Initialise vote counts
@@ -445,6 +461,22 @@ io.on('connection', (socket) => {
     // Strip teacher-only fields before broadcasting to students
     const { correct, explanation, ...studentQuestion } = question;
     io.to(`session:${sessionId}`).emit('question-activated', { question: studentQuestion, sessionId, title: s.title });
+  });
+
+  // Teacher reveals correct answers — closes voting implicitly and broadcasts highlighted indices
+  socket.on('show-answer', ({ sessionId, token }) => {
+    if (token !== TEACHER_SLUG) return;
+    const s = sessions.get(sessionId);
+    if (!s || !s.activeQuestion) return;
+
+    s.open = false;
+    s.answersRevealed = true;
+    touchSession(sessionId);
+
+    // Convert letter list (e.g. ['A','b','C'] or a single string 'B') to 0-based indices
+    const correctIndices = toCorrectIndices(s.activeQuestion.correct);
+
+    io.to(`session:${sessionId}`).emit('answer-revealed', { correctIndices, votes: s.votes, total: s.voters.size });
   });
 
   // Student submits answer(s)

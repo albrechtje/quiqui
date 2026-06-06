@@ -9,6 +9,7 @@ let selectedIndex = -1;
 let currentSessionId = null;
 let currentTitle = null;
 let sessionExpired = false;
+let revealedCorrectIndices = [];
 
 // Slug is the path segment this page was loaded from — used as the teacher token
 const TEACHER_TOKEN = window.location.pathname.replace(/^\//, '').split('/')[0];
@@ -28,9 +29,9 @@ const joinUrlEl       = document.getElementById('join-url');
 const statAnsweredBadge = document.getElementById('stat-answered-badge');
 const barChart        = document.getElementById('bar-chart');
 const btnActivate     = document.getElementById('btn-activate');
+const btnShowAnswer   = document.getElementById('btn-show-answer');
 const btnClose        = document.getElementById('btn-close');
 const btnNext         = document.getElementById('btn-next');
-const correctAnswer   = document.getElementById('correct-answer');
 const statusBadge     = document.getElementById('status-badge');
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -151,6 +152,7 @@ function renderQuestionList() {
 function selectQuestion(index) {
   selectedIndex = index;
   selectedQuestion = questions[index];
+  revealedCorrectIndices = [];
 
   document.querySelectorAll('.q-item').forEach((el, i) => {
     el.classList.toggle('active-q', i === index);
@@ -163,16 +165,10 @@ function selectQuestion(index) {
   statAnsweredBadge.textContent = '0 answered';
   statAnsweredBadge.style.display = '';
   btnActivate.disabled = false;
+  btnShowAnswer.disabled = true;
   btnClose.disabled = true;
   btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
   setStatusBadge(null);
-
-  if (selectedQuestion.correct) {
-    correctAnswer.textContent = 'Correct: ' + selectedQuestion.correct;
-    correctAnswer.style.display = '';
-  } else {
-    correctAnswer.style.display = 'none';
-  }
 
   renderBarChart(selectedQuestion.answers, {}, 0);
   sectionActive.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -199,6 +195,7 @@ function activateQuestion() {
   // Update UI immediately
   setStatusBadge('live');
   btnActivate.disabled = true;
+  btnShowAnswer.disabled = false;
   btnClose.disabled = false;
   btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
 }
@@ -210,10 +207,23 @@ function closeVoting() {
   socket.emit('close-voting', { sessionId: currentSessionId, token: TEACHER_TOKEN });
   setStatusBadge('closed');
   btnClose.disabled = true;
+  btnShowAnswer.disabled = false;
   btnActivate.disabled = false;
   btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
 }
 window.closeVoting = closeVoting;
+
+// ─── Show answer ──────────────────────────────────────────────────────────────
+function showAnswer() {
+  if (!currentSessionId || !selectedQuestion) return;
+  socket.emit('show-answer', { sessionId: currentSessionId, token: TEACHER_TOKEN });
+  setStatusBadge('closed');
+  btnShowAnswer.disabled = true;
+  btnClose.disabled = false;
+  btnActivate.disabled = false;
+  btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
+}
+window.showAnswer = showAnswer;
 
 function nextQuestion() {
   if (selectedIndex < questions.length - 1) {
@@ -238,14 +248,22 @@ async function fetchQR(url) {
 socket.on('vote-update', ({ votes, total }) => {
   if (!selectedQuestion) return;
   statAnsweredBadge.textContent = `${total} answered`;
-  renderBarChart(selectedQuestion.answers, votes, total);
+  renderBarChart(selectedQuestion.answers, votes, total, revealedCorrectIndices);
 });
 
 socket.on('voting-closed', () => {
   setStatusBadge('closed');
   btnClose.disabled = true;
+  btnShowAnswer.disabled = false;
   btnActivate.disabled = false;
   btnNext.style.display = selectedIndex < questions.length - 1 ? '' : 'none';
+});
+
+socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
+  if (!selectedQuestion) return;
+  revealedCorrectIndices = correctIndices;
+  statAnsweredBadge.textContent = `${total} answered`;
+  renderBarChart(selectedQuestion.answers, votes, total, correctIndices);
 });
 
 socket.on('session-expired', () => {
@@ -253,20 +271,22 @@ socket.on('session-expired', () => {
   currentSessionId = null;
   setStatusBadge('closed');
   btnClose.disabled = true;
+  btnShowAnswer.disabled = true;
   btnActivate.disabled = true;
   btnNext.style.display = 'none';
   setStatus('Session has expired. Pull the repo again to start a new session.', true);
 });
 
 // ─── Bar chart ────────────────────────────────────────────────────────────────
-function renderBarChart(answers, votes, total) {
+function renderBarChart(answers, votes, total, correctIndices = []) {
   barChart.innerHTML = '';
   const keys = ['A', 'B', 'C', 'D', 'E', 'F'];
   answers.forEach((ans, i) => {
     const count = (votes && votes[i]) || 0;
     const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    const isCorrect = correctIndices.includes(i);
     const block = document.createElement('div');
-    block.className = 'answer-opt';
+    block.className = 'answer-opt' + (isCorrect ? ' answer-correct' : '');
     block.style.cursor = 'default';
     block.innerHTML = `
       <div class="opt-key">${keys[i] || i + 1}</div>
@@ -281,27 +301,6 @@ function renderBarChart(answers, votes, total) {
     barChart.appendChild(block);
   });
 }
-
-// ─── Answer popover ───────────────────────────────────────────────────────────
-
-let popover = null;
-
-function showAnswerPopover(text) {
-  hideAnswerPopover();
-  popover = document.createElement('div');
-  popover.className = 'answer-popover';
-  popover.textContent = text;
-  popover.addEventListener('click', hideAnswerPopover);
-  document.body.appendChild(popover);
-}
-
-function hideAnswerPopover() {
-  if (popover) { popover.remove(); popover = null; }
-}
-
-document.addEventListener('click', e => {
-  if (popover && !popover.contains(e.target)) hideAnswerPopover();
-});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 // Inline preview for the question list — collapses multiline, converts $$...$$ to $...$

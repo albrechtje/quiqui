@@ -33,10 +33,11 @@ function getSessionId() {
 // ─── Socket events ────────────────────────────────────────────────────────────
 
 // Initial state when joining
-socket.on('session-state', ({ exists, question, open, title }) => {
+socket.on('session-state', ({ exists, question, open, title, answersRevealed, correctIndices }) => {
   if (title) applyTitle(title);
-  if (question && open) {
+  if (question && (open || answersRevealed)) {
     showQuestion(question);
+    if (answersRevealed) highlightCorrect(correctIndices);
   } else {
     document.getElementById('waiting-msg').innerHTML = exists
       ? 'Waiting for the lecturer<span class="dot-anim"></span>'
@@ -58,6 +59,18 @@ socket.on('vote-update', ({ votes, total }) => {
   if (!currentQuestion || !submitted) return;
   updateInlineBars(votes, total);
   resultMeta.textContent = `${total} answer${total !== 1 ? 's' : ''} submitted`;
+});
+
+// Teacher revealed correct answers — highlight them, disable submit, show bars
+socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
+  if (!currentQuestion) return;
+  submitted = true;
+  btnSubmit.disabled = true;
+  showInlineBars();
+  updateInlineBars(votes, total);
+  resultMeta.style.display = '';
+  resultMeta.textContent = `${total} answer${total !== 1 ? 's' : ''} submitted`;
+  highlightCorrect(correctIndices);
 });
 
 // Voting closed by teacher — return to waiting screen
@@ -165,6 +178,15 @@ function submitAnswer() {
   resultMeta.textContent = 'Waiting for results…';
 }
 window.submitAnswer = submitAnswer;
+
+// ─── Correct answer highlight ─────────────────────────────────────────────────
+function highlightCorrect(correctIndices) {
+  if (!correctIndices || !correctIndices.length) return;
+  document.querySelectorAll('.answer-opt').forEach(el => {
+    const idx = parseInt(el.dataset.index, 10);
+    if (correctIndices.includes(idx)) el.classList.add('answer-correct');
+  });
+}
 
 // ─── Inline bar chart ─────────────────────────────────────────────────────────
 function showInlineBars() {
