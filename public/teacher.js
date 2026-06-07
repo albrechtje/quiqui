@@ -99,8 +99,9 @@ async function pullRepo() {
     presenterUrlEl.href = presenterUrl;
 
     // Optional lecturer-provided shortlink from config.yaml — display only,
-    // QuiQui does not resolve or validate where it points.
-    setShortlink(data.config && data.config.student_shortlink);
+    // QuiQui does not resolve or validate where it points. The server normalises
+    // it (trim + scheme prefix) so the value here is ready to use.
+    setShortlink(data.shortlink);
 
     joinInfo.style.display = '';
     fetchQR(joinUrl);
@@ -312,20 +313,18 @@ window.nextQuestion = nextQuestion;
 
 // ─── Optional shortlink ───────────────────────────────────────────────────────
 // Lecturer-provided link from config.yaml (student_shortlink). Display only:
-// QuiQui shows it but never resolves or checks where it points.
-function setShortlink(raw) {
+// QuiQui shows it but never resolves or checks where it points. The server has
+// already normalised it (trim + scheme prefix), so it is null or ready to use.
+function setShortlink(shortlink) {
   const label = document.getElementById('shortlink-label');
   const link = document.getElementById('shortlink-url');
-  const value = typeof raw === 'string' ? raw.trim() : '';
-  if (!value) {
+  if (!shortlink) {
     label.style.display = 'none';
     link.style.display = 'none';
     return;
   }
-  // Add a scheme if the lecturer omitted it, so the anchor is clickable
-  const href = /^https?:\/\//i.test(value) ? value : `https://${value}`;
-  link.textContent = value;
-  link.href = href;
+  link.textContent = shortlink;
+  link.href = shortlink;
   label.style.display = '';
   link.style.display = '';
 }

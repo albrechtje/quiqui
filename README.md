@@ -14,6 +14,7 @@ A lightweight live audience response tool for university lectures. The lecturer 
 
 - **Teacher-paced** — the lecturer controls which question is active; students cannot browse ahead
 - **No student login** — students join by scanning a QR code or visiting a URL
+- **Optional shortlink** — a lecturer-provided `student_shortlink` in `config.yaml` is shown in the teacher view and used in place of the long join URL on the projector, so students can type a memorable address
 - **Live results** — bar chart updates in real time as students submit
 - **Four-state flow** — Activate → Deactivate (bars, no highlights) → Reveal (correct answers highlighted) → Close (students return to waiting screen)
 - **Reveal answer** — teacher reveals correct answers; correct options are highlighted in green for everyone in the room
@@ -118,8 +119,8 @@ Everything in `public/` is served statically and is publicly accessible by filen
 | Event | Direction | Payload | Description |
 |---|---|---|---|
 | `join-session` | client → server | `{ sessionId }` | Student joins a session room |
-| `session-state` | server → client | `{ exists, question, votes, open, total, title, answersRevealed, deactivated, correctIndices }` | Current state sent on join |
-| `session-created` | server → clients | `{ title }` | Emitted when a teacher pulls a repo; updates waiting students |
+| `session-state` | server → client | `{ exists, question, votes, open, total, title, shortlink, answersRevealed, deactivated, correctIndices }` | Current state sent on join |
+| `session-created` | server → clients | `{ title, shortlink }` | Emitted when a teacher pulls a repo; updates waiting students |
 | `activate-question` | client → server | `{ question, sessionId, token, title }` | Teacher activates a question; re-activating the same question preserves votes |
 | `question-activated` | server → clients | `{ question, votes, total, title }` | Broadcast to all students; includes current vote counts for re-activate |
 | `submit-answer` | client → server | `{ sessionId, selected: [0, 2] }` | Student submits answer indices |

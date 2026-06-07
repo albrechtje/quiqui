@@ -16,16 +16,24 @@ const qrImg          = document.getElementById('proj-qr-img');
 const joinUrlEl      = document.getElementById('proj-join-url');
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+const joinUrl = `${location.origin}/join/${getSessionId()}`;
+
 (function init() {
   const sessionId = getSessionId();
   if (!sessionId) return;
 
-  const joinUrl = `${location.origin}/join/${sessionId}`;
-  joinUrlEl.textContent = joinUrl;
+  // QR always encodes the real join URL; the shortlink (if any) only changes the
+  // displayed text once it arrives via session-state / session-created.
+  setJoinDisplay(null);
   fetchQR(joinUrl);
 
   socket.emit('join-session', { sessionId });
 })();
+
+// Show the shortlink if the lecturer provided one, otherwise the full join URL.
+function setJoinDisplay(shortlink) {
+  joinUrlEl.textContent = shortlink || joinUrl;
+}
 
 function getSessionId() {
   const parts = window.location.pathname.split('/');
@@ -42,8 +50,9 @@ async function fetchQR(url) {
 
 // ─── Socket events ────────────────────────────────────────────────────────────
 
-socket.on('session-state', ({ exists, question, open, title, answersRevealed, deactivated, correctIndices, votes, total }) => {
+socket.on('session-state', ({ exists, question, open, title, shortlink, answersRevealed, deactivated, correctIndices, votes, total }) => {
   if (title) applyTitle(title);
+  setJoinDisplay(shortlink);
   if (question && (open || deactivated || answersRevealed)) {
     showQuestion(question);
     if (deactivated || answersRevealed) {
@@ -100,8 +109,9 @@ socket.on('session-expired', () => {
   showScreen('waiting');
 });
 
-socket.on('session-created', ({ title }) => {
+socket.on('session-created', ({ title, shortlink }) => {
   if (title) applyTitle(title);
+  setJoinDisplay(shortlink);
   if (!currentQuestion) {
     document.getElementById('waiting-msg').textContent = 'Waiting for the next question';
     showScreen('waiting');

@@ -290,7 +290,7 @@ select:focus {
 .join-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 28px;
   padding: 12px 0;
   border-top: 0.5px solid var(--color-border);
   border-bottom: 0.5px solid var(--color-border);

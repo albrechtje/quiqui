@@ -128,6 +128,14 @@ function touchSession(sessionId) {
   if (s) s.lastActivity = Date.now();
 }
 
+// Normalise an optional lecturer-provided shortlink (config.student_shortlink).
+// Display-only: trimmed, with https:// prefixed if no scheme. Returns null if absent.
+function normaliseShortlink(raw) {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) return null;
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 // Serve client-side bundles from node_modules
@@ -361,6 +369,7 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
 
     // Register or refresh the session entry (no active question yet)
     const sessionToken = crypto.randomBytes(4).toString('hex'); // fresh on every pull
+    const shortlink = normaliseShortlink(config.student_shortlink);
     if (!existing) {
       sessions.set(sessionId, {
         sessionId,
@@ -369,6 +378,7 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
         questionsDir,
         activeQuestion: null,
         title: config.title || null,
+        shortlink,
         votes: {},
         voters: new Set(),
         open: false,
@@ -378,7 +388,7 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
       log.info(`Session '${sessionId}' started`);
       log.info(`  repo=${repo}`);
       // Notify any students already waiting at this URL
-      io.to(`session:${sessionId}`).emit('session-created', { title: config.title || null, sessionToken });
+      io.to(`session:${sessionId}`).emit('session-created', { title: config.title || null, sessionToken, shortlink });
     } else {
       log.info(`Session '${sessionId}' refreshed`);
       log.info(`  repo=${repo}`);
@@ -386,10 +396,11 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
       existing.sessionToken = sessionToken;
       existing.questionsDir = questionsDir;
       existing.title = config.title || null;
+      existing.shortlink = shortlink;
       existing.answersRevealed = false;
       existing.lastActivity = Date.now();
       // Notify students of the new token so their sessionStorage keys are invalidated
-      io.to(`session:${sessionId}`).emit('session-created', { title: config.title || null, sessionToken });
+      io.to(`session:${sessionId}`).emit('session-created', { title: config.title || null, sessionToken, shortlink });
     }
 
     // List .yaml / .yml files (excluding config.yaml)
@@ -398,7 +409,7 @@ app.post('/api/pull', requireTeacher, async (req, res) => {
       (f.endsWith('.yaml') || f.endsWith('.yml')) && f !== 'config.yaml' && f !== 'config.yml'
     );
 
-    res.json({ files, config, sessionId });
+    res.json({ files, config, sessionId, shortlink });
   } catch (err) {
     log.error('Pull failed:', err.message);
     const msg = err.message.includes('timed out') ? err.message
@@ -517,13 +528,14 @@ io.on('connection', (socket) => {
         open: s.open,
         total: s.voters.size,
         title: s.title || null,
+        shortlink: s.shortlink || null,
         answersRevealed: s.answersRevealed,
         deactivated: !s.open && !s.answersRevealed,
         correctIndices,
         sessionToken: s.sessionToken,
       });
     } else {
-      socket.emit('session-state', { exists: !!s, question: null, votes: null, open: false, total: 0, title: s ? s.title || null : null, answersRevealed: false, deactivated: false, correctIndices: [], sessionToken: s ? s.sessionToken : null });
+      socket.emit('session-state', { exists: !!s, question: null, votes: null, open: false, total: 0, title: s ? s.title || null : null, shortlink: s ? s.shortlink || null : null, answersRevealed: false, deactivated: false, correctIndices: [], sessionToken: s ? s.sessionToken : null });
     }
   });
 
