@@ -97,6 +97,11 @@ async function pullRepo() {
     const presenterUrlEl = document.getElementById('presenter-url');
     presenterUrlEl.textContent = presenterUrl;
     presenterUrlEl.href = presenterUrl;
+
+    // Optional lecturer-provided shortlink from config.yaml — display only,
+    // QuiQui does not resolve or validate where it points.
+    setShortlink(data.config && data.config.student_shortlink);
+
     joinInfo.style.display = '';
     fetchQR(joinUrl);
 
@@ -304,6 +309,26 @@ function nextQuestion() {
   if (selectedIndex < questions.length - 1) selectQuestion(selectedIndex + 1);
 }
 window.nextQuestion = nextQuestion;
+
+// ─── Optional shortlink ───────────────────────────────────────────────────────
+// Lecturer-provided link from config.yaml (student_shortlink). Display only:
+// QuiQui shows it but never resolves or checks where it points.
+function setShortlink(raw) {
+  const label = document.getElementById('shortlink-label');
+  const link = document.getElementById('shortlink-url');
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) {
+    label.style.display = 'none';
+    link.style.display = 'none';
+    return;
+  }
+  // Add a scheme if the lecturer omitted it, so the anchor is clickable
+  const href = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  link.textContent = value;
+  link.href = href;
+  label.style.display = '';
+  link.style.display = '';
+}
 
 // ─── QR code ──────────────────────────────────────────────────────────────────
 async function fetchQR(url) {

@@ -298,10 +298,18 @@ select:focus {
 }
 
 .join-url {
-  font-size: 15px;
+  display: block;
+  font-size: 14px;
   font-weight: 500;
+  line-height: 1.3;
   color: var(--color-accent);
   word-break: break-all;
+}
+
+/* Compact stack of label + link rows (presenter / student / shortlink) */
+.join-links__label {
+  margin-top: 8px;
+  margin-bottom: 4px;
 }
 
 /* ─── Live stats ───────────────────────────────────────────────── */
