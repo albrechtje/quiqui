@@ -12,9 +12,11 @@
   zoom: 1.5;
 }
 
-/* Content column: reuses .page-wrap--narrow (480px) from style.css,
-   but without the bottom padding override so it sits flush */
+/* Content column: reuses .page-wrap--narrow from style.css, but the projector
+   has more screen real estate, so widen it to 1.5× (480px → 720px) and drop the
+   bottom padding override so it sits flush */
 .proj-content {
+  max-width: 720px;
   padding-bottom: 1rem;
 }
 
