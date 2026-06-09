@@ -1,6 +1,9 @@
 /* ─── Projector / beamer view ────────────────────────────────────────────── */
 
-/* Outer: center the QR + content pair on screen */
+/* Outer: the QR sidebar + content column. Kept at a FIXED reference zoom so the
+   logo, title and QR code never resize — only the question card inside scales
+   (see .proj-card-fit + fitScreen() in projector.js). 1.5 = reference scale for
+   a 1920px-wide beamer. */
 .projector-outer {
   display: flex;
   flex-direction: row;
@@ -8,10 +11,23 @@
   justify-content: center;
   gap: 1.5rem;
   padding: 0 1rem;
-  min-height: 100vh;
-  /* zoom is set dynamically from JS (fitScreen) to scale with viewport width;
-     1.5 is the fallback for the reference 1920px-wide screen */
   zoom: 1.5;
+}
+
+/* Full-viewport stage that top-centres the fixed layout. */
+.projector-stage {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* The only dynamically-scaled element. fitScreen() measures its natural height
+   and sets a zoom (≤1) so the card fits the space left below the header — more
+   answer options or a shorter screen shrink just the card, leaving the header
+   and QR sidebar stable. transform-origin keeps it anchored to the top. */
+.proj-card-fit {
+  transform-origin: top center;
 }
 
 /* Content column: reuses .page-wrap--narrow from style.css, but the projector

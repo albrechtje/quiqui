@@ -14,15 +14,27 @@ const answerList     = document.getElementById('proj-answer-list');
 const resultMeta     = document.getElementById('proj-result-meta');
 const qrImg          = document.getElementById('proj-qr-img');
 const joinUrlEl      = document.getElementById('proj-join-url');
-const projectorOuter = document.querySelector('.projector-outer');
+const cardFit        = document.getElementById('proj-card-fit');
 
 // ─── Responsive scaling ─────────────────────────────────────────────────────────
-// Chrome ignores vw units inside `zoom`, so we set the zoom from JS instead.
-// 1.5× at the reference 1920px viewport, clamped to [1, 2.5] for low-res
-// projectors and large 4K displays. Keys off CSS-pixel viewport width.
+// Only the question card scales; the header (logo + title) and QR sidebar stay
+// at the fixed reference zoom (1.5, set in CSS on .projector-outer) for a stable
+// look. We measure the card's natural height and shrink it (scale ≤ 1) just
+// enough to fit the space left between its top edge and the bottom of the
+// viewport — so more answer options or a shorter screen shrink the card alone.
+const MAX_CARD_SCALE = 1;     // never enlarge past its natural (1.5×) size
+const FIT_MARGIN = 0.97;      // breathing room above the bottom edge
+
 function fitScreen() {
-  const zoom = Math.min(2.5, Math.max(1, window.innerWidth / 1280));
-  if (projectorOuter) projectorOuter.style.zoom = zoom;
+  if (!cardFit) return;
+  // Reset to natural size before measuring; rect values already include the
+  // parent's CSS zoom, so all the maths below is in real viewport pixels.
+  cardFit.style.transform = 'scale(1)';
+  const rect = cardFit.getBoundingClientRect();
+  const available = (window.innerHeight - rect.top) * FIT_MARGIN;
+  if (rect.height <= 0) return;
+  const scale = Math.min(MAX_CARD_SCALE, available / rect.height);
+  cardFit.style.transform = `scale(${scale})`;
 }
 window.addEventListener('resize', fitScreen);
 fitScreen();
@@ -91,6 +103,7 @@ socket.on('question-activated', ({ question, title }) => {
   if (title) applyTitle(title);
   showQuestion(question);
   resultMeta.style.display = 'none';
+  refit();
 });
 
 socket.on('question-deactivated', ({ votes, total }) => {
@@ -175,6 +188,7 @@ function showInlineBars() {
     document.getElementById(`opt-bar-wrap-${i}`)?.classList.add('visible');
     document.getElementById(`opt-bar-pct-${i}`)?.classList.add('visible');
   });
+  refit(); // bars + percentages add height
 }
 
 function updateInlineBars(votes, total) {
@@ -193,6 +207,13 @@ function updateInlineBars(votes, total) {
 function showScreen(name) {
   screenWaiting.style.display  = name === 'waiting'  ? '' : 'none';
   screenQuestion.style.display = name === 'question' ? '' : 'none';
+  refit();
+}
+
+// Re-fit after content changes. rAF lets the browser lay out the new content
+// (and render math/markdown) before we measure its natural height.
+function refit() {
+  requestAnimationFrame(fitScreen);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@
 </head>
 <body>
 
+  <div class="projector-stage">
   <div class="projector-outer">
 
     <!-- Left: QR + join URL — spacer matches .top-bar height so card aligns with question card -->
@@ -29,23 +30,30 @@
         <span class="logo-title" id="logo-title"></span>
       </header>
 
-      <!-- Waiting screen -->
-      <section class="card screen" id="screen-waiting">
-        <div class="join-screen-inner">
-          <div class="waiting-msg" id="waiting-msg">Waiting for the next question</div>
-        </div>
-      </section>
+      <!-- Only this card area scales to fit; the header above and the QR
+           sidebar stay at the fixed reference size for a stable look. -->
+      <div class="proj-card-fit" id="proj-card-fit">
 
-      <!-- Question screen -->
-      <section class="card screen" id="screen-question" style="display:none;">
-        <div class="type-hint" id="type-hint"></div>
-        <div class="q-heading" id="proj-q-text"></div>
-        <div class="answer-list" id="proj-answer-list"></div>
-        <div class="meta-line" id="proj-result-meta" style="display:none;"></div>
-      </section>
+        <!-- Waiting screen -->
+        <section class="card screen" id="screen-waiting">
+          <div class="join-screen-inner">
+            <div class="waiting-msg" id="waiting-msg">Waiting for the next question</div>
+          </div>
+        </section>
+
+        <!-- Question screen -->
+        <section class="card screen" id="screen-question" style="display:none;">
+          <div class="type-hint" id="type-hint"></div>
+          <div class="q-heading" id="proj-q-text"></div>
+          <div class="answer-list" id="proj-answer-list"></div>
+          <div class="meta-line" id="proj-result-meta" style="display:none;"></div>
+        </section>
+
+      </div>
 
     </div>
 
+  </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
