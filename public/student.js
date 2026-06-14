@@ -21,10 +21,17 @@ const resultMeta      = document.getElementById('student-result-meta');
   const sessionId = getSessionId();
   if (!sessionId) return;
 
-  socket.emit('join-session', { sessionId });
-
   btnSubmit.addEventListener('click', submitAnswer);
 })();
+
+// Join (and re-join) the session room on every (re)connect. A reconnect gives us
+// a new socket id that is not in the room, so joining only once at page load would
+// silently stop all broadcasts (question-activated, vote-update, …) after an idle
+// drop — the student screen would freeze and never advance.
+socket.on('connect', () => {
+  const sessionId = getSessionId();
+  if (sessionId) socket.emit('join-session', { sessionId });
+});
 
 function getSessionId() {
   const parts = window.location.pathname.split('/');

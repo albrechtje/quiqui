@@ -50,9 +50,16 @@ const joinUrl = `${location.origin}/join/${getSessionId()}`;
   // displayed text once it arrives via session-state / session-created.
   setJoinDisplay(null);
   fetchQR(joinUrl);
-
-  socket.emit('join-session', { sessionId });
 })();
+
+// Join (and re-join) the session room on every (re)connect. A reconnect gives us
+// a new socket id that is not in the room, so joining only once at page load would
+// silently freeze the beamer on a stale question after an idle drop — no further
+// question-activated / vote-update / session-* broadcasts would arrive.
+socket.on('connect', () => {
+  const sessionId = getSessionId();
+  if (sessionId) socket.emit('join-session', { sessionId });
+});
 
 // Show the shortlink if the lecturer provided one, otherwise the full join URL.
 function setJoinDisplay(shortlink) {
