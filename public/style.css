@@ -313,7 +313,7 @@ select:focus {
   word-break: break-all;
 }
 
-/* Compact stack of label + link rows (presenter / student / shortlink) */
+/* Compact stack of label + link rows (projector / student / shortlink) */
 .join-links__label {
   margin-top: 8px;
   margin-bottom: 4px;

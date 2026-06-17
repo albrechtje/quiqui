@@ -95,10 +95,10 @@ async function pullRepo() {
     const joinUrl = `${location.origin}/join/${currentSessionId}`;
     joinUrlEl.textContent = joinUrl;
     joinUrlEl.href = joinUrl;
-    const presenterUrl = `${location.origin}/view/${currentSessionId}`;
-    const presenterUrlEl = document.getElementById('presenter-url');
-    presenterUrlEl.textContent = presenterUrl;
-    presenterUrlEl.href = presenterUrl;
+    const projectorUrl = `${location.origin}/view/${currentSessionId}`;
+    const projectorUrlEl = document.getElementById('projector-url');
+    projectorUrlEl.textContent = projectorUrl;
+    projectorUrlEl.href = projectorUrl;
 
     // Optional lecturer-provided shortlink from config.yaml — display only,
     // QuiQui does not resolve or validate where it points. The server normalises

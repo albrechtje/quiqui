@@ -1,4 +1,6 @@
-# QuiQui — Quickstart for Lecturers
+<img src="public/quiqui-logo.png" alt="QuiQui" width="240" />
+
+# Quickstart for Lecturers
 
 > Part of the [QuiQui](https://github.com/albrechtje/quiqui) open source project. Hosted instance: [quiqui-x9um.onrender.com](https://quiqui-x9um.onrender.com) (may take ~30s to wake up on first visit).
 
@@ -22,7 +24,7 @@ QuiQui lets you pose a question to your class and see live answers on screen —
    ```
    Contact the hosted service operator to receive your teacher slug.
 3. **Put the student QR code or URL in your slides** — it never changes as long as `session_url` in `config.yaml` stays the same. Choose a unique name that includes your organisation or course (e.g. `tum-python101`) — generic names like `demo` will conflict if another lecturer uses the same name on the same server
-4. **Optionally bookmark the presenter URL** (`/view/<session_url>`) to open in your browser during the lecture — it shows the live question and results on your beamer alongside the QR code
+4. **Optionally bookmark the projector URL** (`/view/<session_url>`) to open in your browser during the lecture — it shows the live question and results on your beamer alongside the QR code
 
 ---
 
@@ -58,11 +60,13 @@ If a student hasn't voted when you deactivate or reveal, they see "Voting has en
 
 ---
 
-## Presenter view (beamer)
+## Projector view (beamer)
+
+![Projector View](public/projector-view.png)
 
 Open `/view/<session_url>` in your browser and project it on the beamer. It shows the same question and live result bars as the student view, plus the QR code and join URL — so students can scan at any time. No submit button, no interaction needed.
 
-The presenter URL is shown in the teacher view next to the student join URL as soon as a repo is pulled. If your organisation doesn't allow browser add-ins in PowerPoint, this is the recommended way to display live results during a presentation.
+The projector URL is shown in the teacher view next to the student join URL as soon as a repo is pulled. If your organisation doesn't allow browser add-ins in PowerPoint, this is the recommended way to display live results during a presentation.
 
 ---
 

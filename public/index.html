@@ -49,11 +49,21 @@
       border-radius: var(--radius-lg);
       box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     }
-    .screenshots figcaption {
+    .screenshots figcaption,
+    .screenshot-wide figcaption {
       font-size: 12px;
       color: var(--color-text-hint);
       text-align: center;
       margin-top: 6px;
+    }
+    .screenshot-wide {
+      margin: 1rem 0 0;
+    }
+    .screenshot-wide img {
+      width: 100%;
+      border: 0.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     }
     .features {
       display: grid;
@@ -107,6 +117,10 @@
             <figcaption>Student view</figcaption>
           </figure>
         </div>
+        <figure class="screenshot-wide">
+          <img src="/projector-view.png" alt="Projector view showing the QR code beside the live question and result bars, sized for a beamer" />
+          <figcaption>Projector view — for the beamer</figcaption>
+        </figure>
       </section>
 
       <section class="card">

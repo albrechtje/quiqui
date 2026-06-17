@@ -1,4 +1,4 @@
-# QuiQui
+<img src="public/quiqui-logo.png" alt="QuiQui" width="240" />
 
 A lightweight live audience response tool for university lectures. The lecturer poses a question, students answer on their own devices, and the class sees a live bar chart of the distribution. The teacher can optionally reveal correct answers at any time.
 
@@ -98,13 +98,13 @@ quiqui/
 └── public/                 # Served statically (no auth required)
     ├── index.html          # Landing page
     ├── student.html        # Student view
-    ├── projector.html      # Presenter/beamer view — read-only, shows QR + live results
+    ├── projector.html      # Projector/beamer view — read-only, shows QR + live results
     ├── privacy.html        # Privacy policy (DE/EN)
     ├── style.css           # Shared styles
-    ├── projector.css       # Presenter-view styles
+    ├── projector.css       # Projector-view styles
     ├── teacher.js          # Teacher frontend logic
     ├── student.js          # Student frontend logic
-    ├── projector.js        # Presenter-view frontend logic
+    ├── projector.js        # Projector-view frontend logic
     └── quiqui-logo.png     # Logo
 ```
 
