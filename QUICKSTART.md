@@ -49,43 +49,20 @@ Step by step:
 
 ### Choosing a unique `session_url`
 
-> ⚠️ **A session is identified by its `session_url`, not by you.** Everyone running with the same `session_url` on the same server shares **one** live session — the same active question, the same vote tally, the same results. Two lecturers who collide will silently overwrite each other's active question and mix their students' votes together.
-
-This is easy to get wrong, because the natural choice is a generic abbreviation of the lecture — `databases`, `programming`, `nlp`. **These are exactly the names most likely to collide**, because another lecturer teaching the same subject will reach for the same word. The same trap applies if you and colleagues share one question repo: you all inherit its single `session_url`.
-
-**Best practice — prefix with abbreviations that no one else would use.** Combine institution + course + lecturer (or any subset that makes it unmistakably yours):
-
-| ❌ Too generic (will collide) | ✅ Unique |
-|---|---|
-| `databases` | `thn-db-alb` (TH Nürnberg · Databases · Albrecht) |
-| `programming` | `tum-prog1-mueller` |
-| `nlp` | `lmu-nlp-ws25` |
-| `demo` | `ki-zentrum-demo` |
-
-The `session_url` only needs to be unique among sessions running **at the same time** on the same server — but since you can't know what colleagues picked, a personal prefix is the safe default. Pick it once, put the QR code in your slides, and it stays stable for the whole semester.
-
-> If you and colleagues want to run the **same demo** simultaneously, each of you must fork the questions repo and give your fork a unique `session_url`.
+> ⚠️ **`session_url` must be globally unique on the server.** A session is identified by its `session_url`, not by you — anyone running with the same value (including colleagues sharing one question repo) shares **one** live session, silently overwriting each other's active question and mixing students' votes together. Don't use a generic lecture name like `databases`; prefix it to make it unmistakably yours, e.g. `thn-db-alb`. Full naming guide: [Choosing a `session_url`](https://github.com/albrechtje/quiqui-questions#choosing-a-session_url) in the question repo README.
 
 ---
 
 ## Designing your questions
 
-Question files (`.yaml`, one per lecture topic) live in the same repo. The **[question repo README](https://github.com/albrechtje/quiqui-questions)** has the full format reference, formatting instructions (Markdown + LaTeX math), and ready-made templates you can copy:
+Questions live in `.yaml` files in your repo — one file per lecture topic. The **[question repo README](https://github.com/albrechtje/quiqui-questions)** is the full reference: field format, Markdown + LaTeX support, copy-paste examples, ready-made templates, and even a prompt for generating a question file with ChatGPT or Claude. Start there.
 
-- **Per-lecture question files** — e.g. [`lecture1-python-basics.yaml`](https://github.com/albrechtje/quiqui-questions/blob/main/lecture1-python-basics.yaml) — single- and multiple-choice questions with optional `correct` answers and explanations
-- **[`generic.yaml`](https://github.com/albrechtje/quiqui-questions/blob/main/generic.yaml)** — reusable A/B/C/D, Yes/No, True/False, and 5-point agreement-scale templates for slide-based questions where the text stays in your slides
+Two things to decide before you write questions:
 
-Questions support plain text, **Markdown** (inline code, code blocks), and **LaTeX** math (`$...$` inline, `$$...$$` display).
+- **Scored or generic?** Include a `correct` field and the **✓ Reveal** button highlights the right option(s) in green for the room. Omit it to keep the question text in your slides and just collect votes — Reveal is hidden, and answers show as letter badges (A, B, C, …). The ready-made [`generic.yaml`](https://github.com/albrechtje/quiqui-questions/blob/main/generic.yaml) has A/B/C/D, Yes/No, True/False, and agreement-scale templates for this mode.
+- **Which file to start from?** The per-lecture examples like [`lecture1-python-basics.yaml`](https://github.com/albrechtje/quiqui-questions/blob/main/lecture1-python-basics.yaml) show scored single- and multiple-choice questions with explanations.
 
-### Two ways to use QuiQui
-
-**With actual questions and correct answers in the YAML** — include a `correct` field. The **✓ Reveal** button highlights the right option(s) in green for everyone in the room.
-
-**Generic / slide-based** — omit `correct` and keep your question text in your slides. QuiQui collects votes and shows the live bar chart; the Reveal button is hidden automatically. Each answer option is labelled with a letter badge (A, B, C, …), so students just call out or click the letter they see on the slide. The ready-made [`generic.yaml`](https://github.com/albrechtje/quiqui-questions/blob/main/generic.yaml) covers A/B/C/D, Yes/No, True/False, and a 5-point agreement scale — load it once and reuse it throughout your lecture.
-
-### Editing later
-
-Edit the `.yaml` files in your GitHub repo and click **Pull latest** in the teacher view to reload. No server restart needed.
+To change questions later, edit the `.yaml` files in GitHub and click **Pull latest** in the teacher view — no server restart needed.
 
 ---
 
