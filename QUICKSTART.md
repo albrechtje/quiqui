@@ -30,7 +30,7 @@ QuiQui lets you pose a question to your class and see live answers on screen —
 
 ## During the lecture
 
-<img src="public/teacher-view.png" alt="Teacher View" width="840" />
+<img src="public/teacher-view.png" alt="Teacher View" width="600" />
 
 1. **Open your bookmarked teacher URL** — the repo is pulled automatically and the QR code appears
 2. **Project the QR code** so students can join (or share the URL verbally)
@@ -48,7 +48,7 @@ QuiQui lets you pose a question to your class and see live answers on screen —
 
 ## What students see
 
-<img src="public/student-view.png" alt="Student View" width="640" />
+<img src="public/student-view.png" alt="Student View" width="500" />
 
 Students visit the join URL or scan the QR code — no login, no app install. They see "Waiting for the next question" until you activate a question. After submitting their answer (only once per question), the result bars appear live under each answer option.
 
@@ -62,7 +62,7 @@ If a student hasn't voted when you deactivate or reveal, they see "Voting has en
 
 ## Projector view (beamer)
 
-<img src="public/projector-view.png" alt="Projector View" width="672" />
+<img src="public/projector-view.png" alt="Projector View" width="700" />
 
 Open `/view/<session_url>` in your browser and project it on the beamer. It shows the same question and live result bars as the student view, plus the QR code and join URL — so students can scan at any time. No submit button, no interaction needed.
 
