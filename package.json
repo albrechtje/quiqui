@@ -2,6 +2,7 @@
   "name": "quiqui",
   "version": "1.0.0",
   "description": "Live audience response tool for university lectures",
+  "license": "AGPL-3.0-or-later",
   "main": "server.js",
   "scripts": {
     "start": "./start.sh",
