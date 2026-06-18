@@ -1,27 +1,53 @@
 <img src="public/quiqui-logo.png" alt="QuiQui" width="240" />
 
-A lightweight live audience response tool for university lectures. The lecturer poses a question, students answer on their own devices, and the class sees a live bar chart of the distribution. The teacher can optionally reveal correct answers at any time.
+# Live audience response for lectures — no apps, no accounts, no database
 
-> Deliberately minimal: no accounts, no app installs, no scoring. Requires just a github repo with your questions in yaml.
+**QuiQui turns any lecture into a live poll in seconds.** You activate a question, students scan a QR code and answer on their phones, and the whole room watches the results fill in on a live bar chart. Reveal the correct answer whenever you like — it lights up green for everyone at once.
 
-**→ [Quickstart guide for lecturers](QUICKSTART.md)** — get up and running in 5 minutes.
+No student sign-up. No app to install. No admin panel to click through — **your questions are just YAML files in a GitHub repo.**
 
-**→ [Live hosted service](https://quiqui-x9um.onrender.com)** — hosted instance (may take ~30s to wake up on first visit).
+**→ [Try the live demo](https://quiqui-x9um.onrender.com)** — hosted instance (may take ~30s to wake on first visit)
+**→ [Quickstart for lecturers](QUICKSTART.md)** — your own quiz running in 5 minutes
 
 ---
 
-## Features
+## Why QuiQui?
+
+Commerical poll tools want an account, a subscription, your students' data, and a lot of clicking. QuiQui does one thing: **live in-class polling, stripped to the essentials.**
+
+🎯 **Zero friction for students**
+They scan a QR code (or type a short URL) and they're in. No login, no app, no email. Works on any phone with a browser.
+
+📊 **Live results, teacher-paced**
+You decide which question is live — students can't skip ahead. The bar chart updates in real time as votes land, then you **reveal the correct answer** with one click and it turns green on every screen in the room.
+
+📝 **Your questions are plain text in Git**
+Write questions as simple YAML in a public GitHub repo. Version them, diff them, copy them between courses, edit them in your favourite editor. No clunky web form, no vendor lock-in — pull the latest into a session anytime.
+
+🧮 **Built for real teaching content**
+Full **Markdown and LaTeX** support in questions *and* answers — code blocks, inline code, and proper math (`$\frac{a}{b}$`) render beautifully. Single- and multiple-choice per question.
+
+🖥️ **A view for every screen**
+A dedicated **projector view** shows the QR code and live results on the beamer, while you drive everything from the teacher view — complete with a live stopwatch so you know how long voting's been open.
+
+🪶 **Yours to run, free and private**
+No database, no tracking, no scoring leaderboards. Session state lives in memory and vanishes when the quiz ends. **Self-host it anywhere Node.js runs** — there's no build step. One instance happily serves many lecturers at once.
+
+---
+
+## Full feature list
 
 - **Teacher-paced** — the lecturer controls which question is active; students cannot browse ahead
 - **No student login** — students join by scanning a QR code or visiting a URL
-- **Optional shortlink** — a lecturer-provided `student_shortlink` in `config.yaml` is shown in the teacher view and used in place of the long join URL on the projector, so students can type a memorable address
 - **Live results** — bar chart updates in real time as students submit
 - **Four-state flow** — Activate → Deactivate (bars, no highlights) → Reveal (correct answers highlighted) → Close (students return to waiting screen)
 - **Reveal answer** — teacher reveals correct answers; correct options are highlighted in green for everyone in the room
+- **Projector view** — read-only beamer view showing the QR code and live results, separate from the teacher controls
 - **Run timer** — while a question is active, the teacher view shows a live stopwatch counting up, so the lecturer can see how long voting has been open
 - **Single and multiple choice** — per-question type configured in YAML
 - **Markdown and LaTeX** — question text and answers support code blocks, inline code, and math expressions
 - **Questions in Git** — question files live in a public GitHub repo; no admin interface needed
+- **Optional shortlink** — a lecturer-provided `student_shortlink` in `config.yaml` is shown in the teacher view and used in place of the long join URL on the projector, so students can type a memorable address
 - **Multiple concurrent sessions** — each repo's `session_url` defines an independent session; the URL must be unique per lecturer (e.g. `tum-python101`), as two sessions with the same `session_url` from different repos cannot coexist
 - **No database** — all session state is in memory and intentionally ephemeral
 - **No build step** — vanilla HTML/CSS/JS frontend, deploy anywhere Node.js runs
