@@ -35,10 +35,10 @@ A lightweight live audience response tool for university lectures. The lecturer 
 ### Prerequisites
 
 - Node.js 18 or later
-- A public GitHub repository containing your question YAML files (see [albrechtje/quiqui-questions](https://github.com/albrechtje/quiqui-questions))
+- A public GitHub repository containing your question YAML files (see [th-nuernberg/quiqui-questions](https://github.com/th-nuernberg/quiqui-questions))
 
 ```bash
-git clone https://github.com/albrechtje/quiqui.git
+git clone https://github.com/th-nuernberg/quiqui.git
 cd quiqui
 npm install
 ```
@@ -80,7 +80,7 @@ Then open:
 
 ## Question format
 
-Questions live in a **public GitHub repository**, one `.yaml` file per lecture. See [albrechtje/quiqui-questions](https://github.com/albrechtje/quiqui-questions) for the full format reference and working examples.
+Questions live in a **public GitHub repository**, one `.yaml` file per lecture. See [th-nuernberg/quiqui-questions](https://github.com/th-nuernberg/quiqui-questions) for the full format reference and working examples.
 
 > **Limits:** QuiQui checks the repository size via the GitHub API before cloning and rejects repos larger than **1 MB**. Individual question files larger than **100 KB** are rejected when loaded. Each question may have at most **6 answer options**. YAML files are validated on load — format errors are shown as a clear error message in the teacher view.
 

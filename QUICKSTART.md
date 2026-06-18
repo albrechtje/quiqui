@@ -2,7 +2,7 @@
 
 # Quickstart for Lecturers
 
-> Part of the [QuiQui](https://github.com/albrechtje/quiqui) open source project. Hosted instance: [quiqui-x9um.onrender.com](https://quiqui-x9um.onrender.com) (may take ~30s to wake up on first visit).
+> Part of the [QuiQui](https://github.com/th-nuernberg/quiqui) open source project. Hosted instance: [quiqui-x9um.onrender.com](https://quiqui-x9um.onrender.com) (may take ~30s to wake up on first visit).
 
 QuiQui lets you pose a question to your class and see live answers on screen — no app, no login, no setup for students.
 
@@ -11,13 +11,13 @@ QuiQui lets you pose a question to your class and see live answers on screen —
 ## What you need
 
 - Your QuiQui teacher URL (bookmarked once, reused every lecture)
-- A public GitHub repository with your question files — see [albrechtje/quiqui-questions](https://github.com/albrechtje/quiqui-questions) for the format
+- A public GitHub repository with your question files — see [th-nuernberg/quiqui-questions](https://github.com/th-nuernberg/quiqui-questions) for the format
 
 ---
 
 ## Before the lecture (once)
 
-1. **Set up your question repo** on GitHub with a [`config.yaml`](https://github.com/albrechtje/quiqui-questions/blob/main/config.yaml) and one `.yaml` file per lecture topic — see [Setting up `config.yaml`](#setting-up-configyaml) below
+1. **Set up your question repo** on GitHub with a [`config.yaml`](https://github.com/th-nuernberg/quiqui-questions/blob/main/config.yaml) and one `.yaml` file per lecture topic — see [Setting up `config.yaml`](#setting-up-configyaml) below
 2. **Bookmark your teacher URL:**
    ```
    https://quiqui-x9um.onrender.com/<teacher-slug>?repo=https://github.com/you/quiqui-questions
@@ -30,7 +30,7 @@ QuiQui lets you pose a question to your class and see live answers on screen —
 
 ## Setting up `config.yaml`
 
-Every question repo needs a `config.yaml` in its root. Start from the template: **[config.yaml in the question repo](https://github.com/albrechtje/quiqui-questions/blob/main/config.yaml)** — copy it into your own repo and edit the values.
+Every question repo needs a `config.yaml` in its root. Start from the template: **[config.yaml in the question repo](https://github.com/th-nuernberg/quiqui-questions/blob/main/config.yaml)** — copy it into your own repo and edit the values.
 
 ```yaml
 session_url: thn-db-alb      # unique student join URL segment — see below
@@ -40,7 +40,7 @@ student_shortlink: https://t.ly/abc   # optional, a short link students can type
 
 Step by step:
 
-1. **Create your repo** — fork [albrechtje/quiqui-questions](https://github.com/albrechtje/quiqui-questions) or start a fresh public GitHub repo
+1. **Create your repo** — fork [th-nuernberg/quiqui-questions](https://github.com/th-nuernberg/quiqui-questions) or start a fresh public GitHub repo
 2. **Add `config.yaml`** to the repo root, using the template above as a starting point
 3. **Set `session_url`** to a unique value (see the next section — this is the important one)
 4. **Set `title`** to your lecture name — it appears as `QuiQui: <title>` on the teacher and student pages
@@ -49,18 +49,18 @@ Step by step:
 
 ### Choosing a unique `session_url`
 
-> ⚠️ **`session_url` must be globally unique on the server.** A session is identified by its `session_url`, not by you — anyone running with the same value (including colleagues sharing one question repo) shares **one** live session, silently overwriting each other's active question and mixing students' votes together. Don't use a generic lecture name like `databases`; prefix it to make it unmistakably yours, e.g. `thn-db-alb`. Full naming guide: [Choosing a `session_url`](https://github.com/albrechtje/quiqui-questions#choosing-a-session_url) in the question repo README.
+> ⚠️ **`session_url` must be globally unique on the server.** A session is identified by its `session_url`, not by you — anyone running with the same value (including colleagues sharing one question repo) shares **one** live session, silently overwriting each other's active question and mixing students' votes together. Don't use a generic lecture name like `databases`; prefix it to make it unmistakably yours, e.g. `thn-db-alb`. Full naming guide: [Choosing a `session_url`](https://github.com/th-nuernberg/quiqui-questions#choosing-a-session_url) in the question repo README.
 
 ---
 
 ## Designing your questions
 
-Questions live in `.yaml` files in your repo — one file per lecture topic. The **[question repo README](https://github.com/albrechtje/quiqui-questions)** is the full reference: field format, Markdown + LaTeX support, copy-paste examples, ready-made templates, and even a prompt for generating a question file with ChatGPT or Claude. Start there.
+Questions live in `.yaml` files in your repo — one file per lecture topic. The **[question repo README](https://github.com/th-nuernberg/quiqui-questions)** is the full reference: field format, Markdown + LaTeX support, copy-paste examples, ready-made templates, and even a prompt for generating a question file with ChatGPT or Claude. Start there.
 
 Two things to decide before you write questions:
 
-- **Scored or generic?** Include a `correct` field and the **✓ Reveal** button highlights the right option(s) in green for the room. Omit it to keep the question text in your slides and just collect votes — Reveal is hidden, and answers show as letter badges (A, B, C, …). The ready-made [`generic.yaml`](https://github.com/albrechtje/quiqui-questions/blob/main/generic.yaml) has A/B/C/D, Yes/No, True/False, and agreement-scale templates for this mode.
-- **Which file to start from?** The per-lecture examples like [`lecture1-python-basics.yaml`](https://github.com/albrechtje/quiqui-questions/blob/main/lecture1-python-basics.yaml) show scored single- and multiple-choice questions with explanations.
+- **Scored or generic?** Include a `correct` field and the **✓ Reveal** button highlights the right option(s) in green for the room. Omit it to keep the question text in your slides and just collect votes — Reveal is hidden, and answers show as letter badges (A, B, C, …). The ready-made [`generic.yaml`](https://github.com/th-nuernberg/quiqui-questions/blob/main/generic.yaml) has A/B/C/D, Yes/No, True/False, and agreement-scale templates for this mode.
+- **Which file to start from?** The per-lecture examples like [`lecture1-python-basics.yaml`](https://github.com/th-nuernberg/quiqui-questions/blob/main/lecture1-python-basics.yaml) show scored single- and multiple-choice questions with explanations.
 
 To change questions later, edit the `.yaml` files in GitHub and click **Pull latest** in the teacher view — no server restart needed.
 
