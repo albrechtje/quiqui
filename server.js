@@ -27,6 +27,7 @@ const log = {
 
 const PORT = process.env.PORT || 3000;
 const TEACHER_SLUG = process.env.TEACHER_SLUG || 'teach';
+const DEFAULT_REPO_URL = process.env.DEFAULT_REPO_URL || 'https://github.com/th-nuernberg/quiqui-questions';
 const SESSIONS_DIR = path.join(__dirname, 'tmp', 'sessions');
 
 const SESSION_TIMEOUT_MS = 90 * 60 * 1000; // 90 minutes after last question activation
@@ -161,9 +162,11 @@ app.get('/purify.min.js', (req, res) => {
 // KaTeX fonts (referenced by katex.min.css as ./fonts/...)
 app.use('/fonts', express.static(path.join(__dirname, 'node_modules', 'katex', 'dist', 'fonts')));
 
-// Teacher page
+// Teacher page — default repo URL injected from DEFAULT_REPO_URL env var
+const teacherHtml = fs.readFileSync(path.join(__dirname, 'teacher.html'), 'utf8')
+  .replace('__DEFAULT_REPO_URL__', DEFAULT_REPO_URL.replace(/"/g, '&quot;'));
 app.get(`/${TEACHER_SLUG}`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'teacher.html'));
+  res.type('html').send(teacherHtml);
 });
 
 // Student join page
