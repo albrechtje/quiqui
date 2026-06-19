@@ -2,7 +2,7 @@
 
 # Live audience response for lectures — no apps, no accounts, no database
 
-**QuiQui turns any lecture into a live poll in seconds.** You activate a question, students scan a QR code and answer on their phones, and the whole room watches the results fill in on a live bar chart. Reveal the correct answer whenever you like — it lights up green for everyone at once.
+**Create a quick quiz with QuiQui and turn any lecture into a live poll in seconds.** You activate a question, students scan a QR code and answer on their phones, and the whole room watches the results fill in on a live bar chart. Reveal the correct answer whenever you like — it lights up green for everyone at once.
 
 No student sign-up. No app to install. No admin panel to click through — **your questions are just YAML files in a GitHub repo.**
 
