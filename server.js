@@ -30,6 +30,14 @@ const TEACHER_SLUG = process.env.TEACHER_SLUG || 'teach';
 const DEFAULT_REPO_URL = process.env.DEFAULT_REPO_URL || 'https://github.com/th-nuernberg/quiqui-questions';
 const SESSIONS_DIR = path.join(__dirname, 'tmp', 'sessions');
 
+// App version (from package.json) shown in the footer of every client view,
+// linking to the GitHub releases page. Single source of truth: bumping
+// package.json updates the footer everywhere.
+const APP_VERSION = require('./package.json').version;
+const VERSION_LINK = 'https://github.com/th-nuernberg/quiqui/releases';
+const VERSION_HTML =
+  `<a href="${VERSION_LINK}" target="_blank" rel="noopener" title="Release notes on GitHub">Version ${APP_VERSION}</a>`;
+
 const SESSION_TIMEOUT_MS = 90 * 60 * 1000; // 90 minutes after last question activation
 const REPO_SIZE_LIMIT_KB = 1024;  // 1 MB — GitHub reports size in KB
 const FILE_SIZE_LIMIT_KB = 100;   // 100 KB per question file
@@ -55,6 +63,20 @@ setInterval(() => {
 // must revalidate the document with the server before reusing it — otherwise a
 // new deploy is never picked up. JS/CSS/fonts keep normal ETag revalidation.
 const noCacheHtml = res => res.set('Cache-Control', 'no-cache');
+
+// Pages that carry the footer version link are read once at startup and have
+// their __VERSION__ placeholder substituted. index.html must be served by an
+// explicit route registered *before* express.static, otherwise the static
+// middleware would serve the raw (un-templated) file at '/'.
+const renderHtml = file =>
+  fs.readFileSync(path.join(__dirname, 'public', file), 'utf8').replace('__VERSION__', VERSION_HTML);
+const indexHtml     = renderHtml('index.html');
+const studentHtml   = renderHtml('student.html');
+const privacyHtml   = renderHtml('privacy.html');
+const sendHtml = (res, html) => noCacheHtml(res).type('html').send(html);
+
+app.get('/', (req, res) => sendHtml(res, indexHtml));
+
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => { if (filePath.endsWith('.html')) noCacheHtml(res); },
 }));
@@ -170,15 +192,17 @@ app.get('/purify.min.js', (req, res) => {
 app.use('/fonts', express.static(path.join(__dirname, 'node_modules', 'katex', 'dist', 'fonts')));
 
 // Teacher page — default repo URL injected from DEFAULT_REPO_URL env var
+// (teacher.html lives in the project root, not public/ — see CLAUDE.md)
 const teacherHtml = fs.readFileSync(path.join(__dirname, 'teacher.html'), 'utf8')
-  .replace('__DEFAULT_REPO_URL__', DEFAULT_REPO_URL.replace(/"/g, '&quot;'));
+  .replace('__DEFAULT_REPO_URL__', DEFAULT_REPO_URL.replace(/"/g, '&quot;'))
+  .replace('__VERSION__', VERSION_HTML);
 app.get(`/${TEACHER_SLUG}`, (req, res) => {
-  noCacheHtml(res).type('html').send(teacherHtml);
+  sendHtml(res, teacherHtml);
 });
 
 // Student join page
 app.get('/join/:sessionId', (req, res) => {
-  noCacheHtml(res).sendFile(path.join(__dirname, 'public', 'student.html'));
+  sendHtml(res, studentHtml);
 });
 
 // Projector view — read-only, shows QR + live results, optimised for beamer
@@ -300,6 +324,7 @@ app.get('/impressum', (req, res) => {
     <footer class="site-footer">
       <a href="/impressum${footerBack}">Impressum</a>
       <a href="/privacy${footerBack}">Privacy Policy</a>
+      ${VERSION_HTML}
     </footer>
   </div>
   <script>
@@ -317,7 +342,7 @@ app.get('/impressum', (req, res) => {
 });
 
 app.get('/privacy', (req, res) => {
-  noCacheHtml(res).sendFile(path.join(__dirname, 'public', 'privacy.html'));
+  sendHtml(res, privacyHtml);
 });
 
 // Pull/clone repo and return list of yaml files + config
