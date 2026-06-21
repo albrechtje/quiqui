@@ -212,6 +212,12 @@ select:focus {
   margin-bottom: 1rem;
 }
 
+/* Active card parked inline in place of a question snippet (accordion). The
+   list's flex gap supplies spacing, so drop the card's own bottom margin. */
+.question-list > #section-active {
+  margin: 0;
+}
+
 .q-item {
   display: flex;
   align-items: center;

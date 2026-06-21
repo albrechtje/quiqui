@@ -50,7 +50,14 @@ setInterval(() => {
 }, 10000); // check every 10 s (fine for 90-min timeout; adjust if shortening for tests)
 
 // ─── Static files ─────────────────────────────────────────────────────────────
-app.use(express.static(path.join(__dirname, 'public')));
+// HTML documents are served with `Cache-Control: no-cache` so clients (in
+// particular iOS "Add to Home Screen" web clips, which cache aggressively)
+// must revalidate the document with the server before reusing it — otherwise a
+// new deploy is never picked up. JS/CSS/fonts keep normal ETag revalidation.
+const noCacheHtml = res => res.set('Cache-Control', 'no-cache');
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => { if (filePath.endsWith('.html')) noCacheHtml(res); },
+}));
 app.use(express.json());
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
@@ -166,17 +173,17 @@ app.use('/fonts', express.static(path.join(__dirname, 'node_modules', 'katex', '
 const teacherHtml = fs.readFileSync(path.join(__dirname, 'teacher.html'), 'utf8')
   .replace('__DEFAULT_REPO_URL__', DEFAULT_REPO_URL.replace(/"/g, '&quot;'));
 app.get(`/${TEACHER_SLUG}`, (req, res) => {
-  res.type('html').send(teacherHtml);
+  noCacheHtml(res).type('html').send(teacherHtml);
 });
 
 // Student join page
 app.get('/join/:sessionId', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'student.html'));
+  noCacheHtml(res).sendFile(path.join(__dirname, 'public', 'student.html'));
 });
 
 // Projector view — read-only, shows QR + live results, optimised for beamer
 app.get('/view/:sessionId', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'projector.html'));
+  noCacheHtml(res).sendFile(path.join(__dirname, 'public', 'projector.html'));
 });
 
 // Legal pages
@@ -306,11 +313,11 @@ app.get('/impressum', (req, res) => {
   </script>
 </body>
 </html>`;
-  res.send(html);
+  noCacheHtml(res).send(html);
 });
 
 app.get('/privacy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'privacy.html'));
+  noCacheHtml(res).sendFile(path.join(__dirname, 'public', 'privacy.html'));
 });
 
 // Pull/clone repo and return list of yaml files + config

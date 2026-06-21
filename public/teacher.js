@@ -15,6 +15,7 @@ let currentTotal = 0;
 let currentState = 'inactive';
 let runStart = 0;        // Date.now() when the question went active
 let runTimer = null;     // setInterval handle for the live stopwatch
+let collapseOnClose = false; // when true, the next question-closed echo collapses the inline card
 
 // Slug is the path segment this page was loaded from — used as the teacher token
 const TEACHER_TOKEN = window.location.pathname.replace(/^\//, '').split('/')[0];
@@ -119,8 +120,7 @@ async function pullRepo() {
 
     setStatus(`Pulled ${data.files.length} file(s).`);
     sectionQuestions.style.display = 'none';
-    sectionActive.style.display = 'none';
-    stopStopwatch();
+    parkActiveCard();
     questionList.innerHTML = '';
     selectedQuestion = null;
     selectedIndex = -1;
@@ -158,7 +158,19 @@ async function loadFile() {
 }
 
 // ─── Question list ────────────────────────────────────────────────────────────
+// Park the active card back at its home position (after #section-questions) and
+// hide it. Used before rebuilding the list, which would otherwise delete the
+// card when it is parked inline among the .q-item children.
+function parkActiveCard() {
+  stopStopwatch();
+  sectionActive.style.display = 'none';
+  if (sectionActive.parentElement === questionList) {
+    sectionQuestions.after(sectionActive);
+  }
+}
+
 function renderQuestionList() {
+  parkActiveCard();
   questionList.innerHTML = '';
   questions.forEach((q, i) => {
     const item = document.createElement('div');
@@ -180,6 +192,7 @@ function renderQuestionList() {
 }
 
 function selectQuestion(index) {
+  collapseOnClose = false; // this close is part of switching questions, not a collapse
   if (currentSessionId) socket.emit('close-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
   selectedIndex = index;
   selectedQuestion = questions[index];
@@ -188,9 +201,15 @@ function selectQuestion(index) {
   currentTotal = 0;
   currentState = 'inactive';
 
-  document.querySelectorAll('.q-item').forEach((el, i) => {
-    el.classList.toggle('active-q', i === index);
+  // Inline the active card in place of the selected snippet: hide that snippet
+  // and move the (single) #section-active card to sit right after it in the list.
+  const items = questionList.querySelectorAll('.q-item');
+  items.forEach((el, i) => {
+    el.classList.remove('active-q');
+    el.style.display = i === index ? 'none' : '';
   });
+  const target = items[index];
+  if (target) target.after(sectionActive);
 
   activeQText.innerHTML = mdHtml(selectedQuestion.question);
   sectionActive.style.display = '';
@@ -215,8 +234,23 @@ function selectQuestion(index) {
   }
 
   renderBarChart(selectedQuestion.answers, {}, 0);
-  sectionActive.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  sectionActive.scrollIntoView({ behavior: 'smooth', block: 'center' });
   btnActivate.focus();
+}
+
+// Collapse the inline active card back to a snippet: hide the card and re-show
+// the snippet it replaced, restoring it to the focused list position.
+function collapseActive() {
+  stopStopwatch();
+  sectionActive.style.display = 'none';
+  const item = questionList.querySelector(`.q-item[data-index="${selectedIndex}"]`);
+  if (item) {
+    item.style.display = '';
+    item.classList.remove('active-q');
+    item.focus();
+  }
+  selectedQuestion = null;
+  selectedIndex = -1;
 }
 
 // ─── State machine ────────────────────────────────────────────────────────────
@@ -253,13 +287,15 @@ function setState(state) {
   // Button styles and disabled state per state:
   // strong blue = btn-primary, light blue = btn-light, white = btn-secondary (disabled)
   //               Activate       Reveal         Close
-  // inactive      strong         white(off)     white(off)
+  // inactive      strong         white(off)     light
   // active        light          strong         light
   // deactivated   light          strong         light
   // revealed      light          white(off)     strong
   // closed        strong         white(off)     white(off)
+  // In 'inactive' the question was never activated, so Close has nothing to tear
+  // down server-side — it just collapses the inline card back to a snippet.
   const cfg = {
-    inactive:    { activate: ['btn-primary', false], reveal: ['btn-secondary', true],  close: ['btn-secondary', true],  next: false },
+    inactive:    { activate: ['btn-primary', false], reveal: ['btn-secondary', true],  close: ['btn-light',     false], next: false },
     active:      { activate: ['btn-light',   false], reveal: ['btn-primary',   false], close: ['btn-light',     false], next: false },
     deactivated: { activate: ['btn-light',   false], reveal: ['btn-primary',   false], close: ['btn-light',     false], next: false },
     revealed:    { activate: ['btn-light',   false], reveal: ['btn-secondary', true],  close: ['btn-primary',   false], next: false },
@@ -332,7 +368,11 @@ window.revealAnswer = revealAnswer;
 
 // ─── Close question ───────────────────────────────────────────────────────────
 function closeQuestion() {
+  // A question that was only previewed (never activated) has no server-side
+  // activeQuestion to clear — just collapse the inline card back to a snippet.
+  if (currentState === 'inactive') { collapseActive(); return; }
   if (!currentSessionId) return;
+  collapseOnClose = true; // a deliberate close collapses the inline card back to a snippet
   socket.emit('close-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
 }
 window.closeQuestion = closeQuestion;
@@ -418,7 +458,15 @@ socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
 });
 
 socket.on('question-closed', () => {
-  setState('closed');
+  // A deliberate ✕ Close collapses the inline card back to a snippet. The
+  // close-question emitted while switching questions leaves the flag false, so
+  // the freshly-expanded card for the new question is not collapsed by its echo.
+  if (collapseOnClose) {
+    collapseOnClose = false;
+    collapseActive();
+  } else {
+    setState('closed');
+  }
 });
 
 socket.on('session-expired', () => {
@@ -428,7 +476,10 @@ socket.on('session-expired', () => {
   btnShowAnswer.disabled = true;
   btnClose.disabled = true;
   btnNext.style.display = 'none';
-  stopStopwatch();
+  parkActiveCard();
+  questionList.querySelectorAll('.q-item').forEach(el => { el.style.display = ''; el.classList.remove('active-q'); });
+  selectedQuestion = null;
+  selectedIndex = -1;
   statusBadge.style.display = 'none';
   setStatus('Session has expired. Pull the repo again to start a new session.', true);
 });
