@@ -3,6 +3,8 @@
 # Quickstart for Lecturers
 
 > Part of the [QuiQui](https://github.com/th-nuernberg/quiqui) open source project. Hosted instance: [quiqui-x9um.onrender.com](https://quiqui-x9um.onrender.com) (may take ~30s to wake up on first visit).
+>
+> Got a quick question? See the **[FAQ](FAQ.md)**.
 
 QuiQui lets you pose a question to your class and see live answers on screen — no app, no login, no setup for students.
 

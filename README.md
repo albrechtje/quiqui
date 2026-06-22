@@ -8,6 +8,7 @@ No student sign-up. No app to install. No admin panel to click through — **you
 
 **→ [Try the live demo](https://quiqui-x9um.onrender.com)** — hosted instance (may take ~30s to wake on first visit)
 **→ [Quickstart for lecturers](QUICKSTART.md)** — your own quiz running in 5 minutes
+**→ [FAQ](FAQ.md)** — common questions answered
 
 ---
 
