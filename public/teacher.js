@@ -15,7 +15,12 @@ let currentTotal = 0;
 let currentState = 'inactive';
 let runStart = 0;        // Date.now() when the question went active
 let runTimer = null;     // setInterval handle for the live stopwatch
-let collapseOnClose = false; // when true, the next question-closed echo collapses the inline card
+// The UI for a close is driven synchronously by the teacher action that caused
+// it (closeQuestion collapses the card, selectQuestion swaps to the new card).
+// The server's question-closed echo is then just confirmation. This flag marks
+// such a self-initiated close so its echo is a no-op; an echo arriving without
+// it is an unsolicited (server-side) close, which falls back to setState('closed').
+let selfInitiatedClose = false;
 
 // Slug is the path segment this page was loaded from — used as the teacher token
 const TEACHER_TOKEN = window.location.pathname.replace(/^\//, '').split('/')[0];
@@ -192,8 +197,15 @@ function renderQuestionList() {
 }
 
 function selectQuestion(index) {
-  collapseOnClose = false; // this close is part of switching questions, not a collapse
-  if (currentSessionId) socket.emit('close-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
+  // A live poll (active/deactivated/revealed) has students watching it. Switching
+  // away tears it down server-side and sends those students to the waiting screen,
+  // so confirm before doing it. inactive/closed have nothing live to disturb.
+  const pollIsLive = ['active', 'deactivated', 'revealed'].includes(currentState);
+  if (pollIsLive && !confirm('Close the current poll and switch to this question?')) return;
+  if (pollIsLive && currentSessionId) {
+    selfInitiatedClose = true; // the echo is just confirming this teardown; the new card is rendered below
+    socket.emit('close-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
+  }
   selectedIndex = index;
   selectedQuestion = questions[index];
   revealedCorrectIndices = [];
@@ -251,6 +263,7 @@ function collapseActive() {
   }
   selectedQuestion = null;
   selectedIndex = -1;
+  currentState = 'closed'; // no card shown, no live poll — so a later select sees nothing to confirm
 }
 
 // ─── State machine ────────────────────────────────────────────────────────────
@@ -291,15 +304,16 @@ function setState(state) {
   // active        light          strong         light
   // deactivated   light          strong         light
   // revealed      light          white(off)     strong
-  // closed        strong         white(off)     white(off)
-  // In 'inactive' the question was never activated, so Close has nothing to tear
-  // down server-side — it just collapses the inline card back to a snippet.
+  // closed        strong         white(off)     light
+  // Close is enabled in every card-visible state. In inactive/closed there is no
+  // live poll, so it just collapses the inline card back to a snippet; in the
+  // live states it also tears the poll down server-side (see closeQuestion).
   const cfg = {
     inactive:    { activate: ['btn-primary', false], reveal: ['btn-secondary', true],  close: ['btn-light',     false], next: false },
     active:      { activate: ['btn-light',   false], reveal: ['btn-primary',   false], close: ['btn-light',     false], next: false },
     deactivated: { activate: ['btn-light',   false], reveal: ['btn-primary',   false], close: ['btn-light',     false], next: false },
     revealed:    { activate: ['btn-light',   false], reveal: ['btn-secondary', true],  close: ['btn-primary',   false], next: false },
-    closed:      { activate: [currentTotal > 0 ? 'btn-light' : 'btn-primary', false], reveal: ['btn-secondary', true], close: ['btn-secondary', true], next: currentTotal > 0 },
+    closed:      { activate: [currentTotal > 0 ? 'btn-light' : 'btn-primary', false], reveal: ['btn-secondary', true], close: ['btn-light',     false], next: currentTotal > 0 },
   }[state];
   const hasCorrect = selectedQuestion && selectedQuestion.correct != null;
   btnShowAnswer.style.display = hasCorrect ? '' : 'none';
@@ -368,12 +382,15 @@ window.revealAnswer = revealAnswer;
 
 // ─── Close question ───────────────────────────────────────────────────────────
 function closeQuestion() {
-  // A question that was only previewed (never activated) has no server-side
-  // activeQuestion to clear — just collapse the inline card back to a snippet.
-  if (currentState === 'inactive') { collapseActive(); return; }
-  if (!currentSessionId) return;
-  collapseOnClose = true; // a deliberate close collapses the inline card back to a snippet
-  socket.emit('close-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
+  // Close always dismisses the inline card back to a snippet. If a poll is live
+  // (active/deactivated/revealed) it also tears it down server-side, sending
+  // students to the waiting screen. inactive/closed have no live poll to clear.
+  const pollIsLive = ['active', 'deactivated', 'revealed'].includes(currentState);
+  if (pollIsLive && currentSessionId) {
+    selfInitiatedClose = true; // the echo is just confirming this teardown; the card is collapsed below
+    socket.emit('close-question', { sessionId: currentSessionId, token: TEACHER_TOKEN });
+  }
+  collapseActive();
 }
 window.closeQuestion = closeQuestion;
 
@@ -458,15 +475,15 @@ socket.on('answer-revealed', ({ correctIndices, votes, total }) => {
 });
 
 socket.on('question-closed', () => {
-  // A deliberate ✕ Close collapses the inline card back to a snippet. The
-  // close-question emitted while switching questions leaves the flag false, so
-  // the freshly-expanded card for the new question is not collapsed by its echo.
-  if (collapseOnClose) {
-    collapseOnClose = false;
-    collapseActive();
-  } else {
-    setState('closed');
+  // Closes initiated by the teacher (✕ Close, or switching questions) already
+  // updated the UI synchronously — this echo just confirms the server teardown,
+  // so it is a no-op. An echo arriving unsolicited is a server-side close; fall
+  // back to the closed state so the card reflects that the poll is gone.
+  if (selfInitiatedClose) {
+    selfInitiatedClose = false;
+    return;
   }
+  setState('closed');
 });
 
 socket.on('session-expired', () => {
